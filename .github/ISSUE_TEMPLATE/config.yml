@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question about Claude Code itself
+    url: https://docs.claude.com/en/docs/claude-code/overview
+    about: Plugins, skills, hooks and settings are documented there. Helm only shows and edits them.
+  - name: Security report
+    url: https://github.com/rlpb/helm/security/advisories/new
+    about: Report a vulnerability privately instead of opening an issue.

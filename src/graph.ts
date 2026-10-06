@@ -10,7 +10,7 @@ export const H = 400
 /** How long a used tool glows, in milliseconds. */
 export const GLOW_MS = 6000
 
-export type Node = { key: string; cat: string; x: number; y: number; hub: boolean; label: string; on: boolean }
+export type Node = { key: string; cat: string; x: number; y: number; hub: boolean; label: string; on: boolean; /** How far its dots reach, so the label can sit clear of them. */ reach?: number }
 export type Edge = { from: [number, number]; to: [number, number]; cat: string }
 export type Layout = { nodes: Node[]; edges: Edge[] }
 
@@ -43,7 +43,8 @@ export function layout(index: Entry[]): Layout {
     const angle = (i / Math.max(cats.length, 1)) * Math.PI * 2 - Math.PI / 2
     const hx = cx + Math.cos(angle) * (W * 0.32)
     const hy = cy + Math.sin(angle) * (H * 0.32)
-    nodes.push({ key: `hub:${cat}`, cat, x: hx, y: hy, hub: true, label: cat, on: true })
+    const rings = Math.floor(Math.sqrt((groups.get(cat)!.length - 1) / 4))
+    nodes.push({ key: `hub:${cat}`, cat, x: hx, y: hy, hub: true, label: cat, on: true, reach: 24 + rings * 16 })
     edges.push({ from: [cx, cy], to: [hx, hy], cat })
     const list = groups.get(cat)!
     list.forEach((e, j) => {
@@ -52,7 +53,7 @@ export function layout(index: Entry[]): Layout {
       const first = 4 * ring * ring
       const inRing = 4 * (ring + 1) * (ring + 1) - first
       const a = ((j - first) / inRing) * Math.PI * 2 + angle
-      const r = 20 + ring * 15
+      const r = 24 + ring * 16
       nodes.push({ key: e.key, cat, x: hx + Math.cos(a) * r, y: hy + Math.sin(a) * r, hub: false, label: e.name, on: e.on })
     })
   })
@@ -77,7 +78,7 @@ export function svg(lay: Layout, used: Record<string, number>, now: number): str
     const x = n.x.toFixed(1)
     const y = n.y.toFixed(1)
     if (n.hub) {
-      out.push(`<circle cx="${x}" cy="${y}" r="9" fill="${c}"/><text x="${x}" y="${(n.y + 24).toFixed(1)}" fill="${c}" font-size="12" text-anchor="middle" font-family="sans-serif">${esc(n.label)}</text>`)
+      out.push(`<circle cx="${x}" cy="${y}" r="9" fill="${c}"/><text x="${x}" y="${(n.y + (n.reach ?? 24) + 16).toFixed(1)}" fill="${c}" font-size="12" text-anchor="middle" font-family="sans-serif">${esc(n.label)}</text>`)
       continue
     }
     const lit = glow(used, n.key, now)
@@ -128,7 +129,7 @@ export function cells(lay: Layout, used: Record<string, number>, now: number, co
     if (n.hub) {
       put(n.x, n.y, 0x25c9, color(n.cat))
       const px = Math.round((n.x / W) * (columns - 1)) - Math.floor(n.label.length / 2)
-      const py = Math.round((n.y / H) * (rows - 1)) + 1
+      const py = Math.round(((n.y + (n.reach ?? 24) + 8) / H) * (rows - 1))
       for (let i = 0; i < n.label.length; i++) {
         const cx = px + i
         if (cx >= 0 && cx < columns && py >= 0 && py < rows) grid[py * columns + cx] = { ch: n.label.charCodeAt(i), fg: mix(color(n.cat), 0.8) }

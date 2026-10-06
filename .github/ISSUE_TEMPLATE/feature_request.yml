@@ -1,0 +1,35 @@
+name: Feature request
+description: Something Helm should show, switch or explain
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: The situation first, the feature second.
+      placeholder: "I have 40 skills and cannot tell which ones my project needs."
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: A sketch is welcome. Helm stays small on purpose, so say what it could replace as well as what it could add.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it belongs
+      options:
+        - The band above the prompt
+        - Now
+        - Setup
+        - Chat (the configurator)
+        - History
+        - The catalog of vetted add-ons
+        - Something else
+    validations:
+      required: true

@@ -1,0 +1,28 @@
+{
+  "name": "helm",
+  "owner": {
+    "name": "rlpb",
+    "url": "https://github.com/rlpb"
+  },
+  "metadata": {
+    "description": "Helm: the control panel for Claude Code. It sets up each project with the right skills, shows what is in use, and vets new tools before you add them.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "helm",
+      "source": "./",
+      "description": "The control panel for Claude Code: it sets up each project with the right skills and tools, shows what is in use, and vets new tools before you add them.",
+      "version": "0.1.0",
+      "author": {
+        "name": "rlpb",
+        "url": "https://github.com/rlpb"
+      },
+      "homepage": "https://github.com/rlpb/helm",
+      "repository": "https://github.com/rlpb/helm",
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "keywords": ["mod", "dashboard", "skills", "plugins", "project", "setup"]
+    }
+  ]
+}

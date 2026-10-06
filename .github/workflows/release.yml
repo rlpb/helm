@@ -1,0 +1,206 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build"
+        required: true
+
+# Read-only by default. The jobs that write to the release ask for it below.
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  # The same scans the push workflow runs, on the commit about to be published.
+  # A gate that publishes has to clear the bar the gate that does not already
+  # clears, or the bar is decorative.
+  guards:
+    uses: ./.github/workflows/guards.yml
+    with:
+      ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+  package:
+    needs: guards
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # An archive named after one version and holding another is the kind of
+      # mistake nobody catches until someone reports a bug against a build that
+      # does not exist.
+      - name: The tag, the manifests and the changelog must agree
+        shell: bash
+        run: |
+          version="${TAG#v}"
+          declared=$(node -p "require('./.claude-plugin/plugin.json').version")
+          echo "tag $version, plugin.json $declared"
+          if [ "$version" != "$declared" ]; then
+            echo "::error::the tag says $version and plugin.json says $declared"
+            exit 1
+          fi
+          node scripts/check.mjs
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+
+      - name: Create or reuse the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${TAG#v}"
+          # Written notes, not generated ones. A list of commit subjects tells a
+          # reader what was typed, never what changed for them.
+          body=$(awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md)
+          if [ -z "$(echo "$body" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has a heading for $version but nothing under it"
+            exit 1
+          fi
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --title "Helm $TAG" --notes "$body"
+          else
+            gh release edit "$TAG" --notes "$body"
+          fi
+
+      - run: npm install --global @anthropic-ai/claude-code@2.1.289
+
+      # What users get is this archive, not the working tree. .gitattributes
+      # decides what it leaves out, so it has to be tested as built.
+      - name: Build the archive
+        run: |
+          version="${TAG#v}"
+          mkdir -p out
+          git archive --format=zip --prefix="helm-$version/" -o "out/helm-$version.zip" "$TAG"
+          unzip -l "out/helm-$version.zip"
+
+      - name: The archive validates, and its source is what the tests ran on
+        shell: bash
+        run: |
+          version="${TAG#v}"
+          rm -rf unpacked && mkdir unpacked
+          unzip -q "out/helm-$version.zip" -d unpacked
+          claude plugin validate "unpacked/helm-$version"
+          claude plugin validate "unpacked/helm-$version/.claude-plugin/plugin.json"
+          for path in .claude-plugin/plugin.json hooks/hooks.json hooks/register.tsx src/catalog.ts src/load.ts types/index.d.ts LICENSE NOTICE; do
+            test -f "unpacked/helm-$version/$path" || { echo "::error::the archive is missing $path"; exit 1; }
+          done
+          # The tests ran in CI on this commit; here only the shipped tree is checked.
+          # Nothing from the repository's own tooling should ride along.
+          for path in .github docs tests scripts; do
+            if [ -e "unpacked/helm-$version/$path" ]; then
+              echo "::error::the archive carries $path, which is not part of the mod"
+              exit 1
+            fi
+          done
+
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" out/helm-*.zip --clobber
+
+  publish:
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # edit the release and attach the checksums
+      id-token: write # mint the short-lived certificate the attestation is signed with
+      attestations: write # store the attestation next to the repository
+    steps:
+      - uses: actions/checkout@v7
+
+      # Published alongside the archive so anyone downloading it can check they
+      # got the file this workflow produced, and not something a mirror or a
+      # hijacked link handed them instead.
+      - name: Checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p sums && cd sums
+          gh release download "$TAG" --pattern "helm-*" --clobber
+          sha256sum helm-* | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
+
+      # A checksum says the file is the one this workflow produced, to whoever
+      # trusts the checksum file. This says which workflow, in which repository,
+      # at which commit, signed by a certificate GitHub issued for that run, and
+      # it can be checked against GitHub without trusting anything in the release:
+      #   gh attestation verify <file> --repo rlpb/helm
+      - name: Attest where the archive came from
+        uses: actions/attest@v4
+        with:
+          subject-path: sums/helm-*
+
+      # The release is still a draft here, so this can stop it before anyone can
+      # download it. It does to the files as GitHub serves them exactly what the
+      # README tells a user to do, with no --ignore-missing: a name in
+      # SHA256SUMS.txt that matches no asset fails it. The attestation is retried,
+      # because it takes a few seconds to become visible after it is created.
+      - name: Verify what a user will download, before it is public
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir verify && cd verify
+          gh release download "$TAG" --pattern '*'
+          sha256sum -c SHA256SUMS.txt
+          listed=$(wc -l < SHA256SUMS.txt)
+          present=$(find . -maxdepth 1 -type f ! -name SHA256SUMS.txt | wc -l)
+          if [ "$listed" -ne "$present" ] || [ "$listed" -eq 0 ]; then
+            echo "::error::SHA256SUMS.txt lists $listed files and the release has $present archives"
+            exit 1
+          fi
+          for file in $(find . -maxdepth 1 -type f ! -name SHA256SUMS.txt | sort); do
+            ok=0
+            for attempt in 1 2 3 4 5 6; do
+              if gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then ok=1; break; fi
+              sleep 10
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::no valid attestation for $file"
+              exit 1
+            fi
+            echo "verified $file"
+          done
+
+          # Checks that cannot fail prove nothing. A changed copy of the archive has
+          # to fail the checksum, and the attestation has to refuse another repository.
+          first=$(find . -maxdepth 1 -type f ! -name SHA256SUMS.txt | sort | head -1)
+          mkdir ../negative
+          cp SHA256SUMS.txt ../negative/
+          cp "$first" "../negative/$(basename "$first")"
+          printf 'x' >> "../negative/$(basename "$first")"
+          result=$(cd ../negative && sha256sum -c SHA256SUMS.txt --ignore-missing 2>&1) || true
+          if ! echo "$result" | grep -q 'FAILED'; then
+            echo "::error::the checksum check did not catch a changed file"
+            exit 1
+          fi
+          if gh attestation verify "$first" --repo rlpb/not-this-repository > /dev/null 2>&1; then
+            echo "::error::the attestation check passed for a repository that did not build the file"
+            exit 1
+          fi
+          echo "the negative controls failed as they should"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --draft=false --latest

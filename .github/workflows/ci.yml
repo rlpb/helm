@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guards:
+    uses: ./.github/workflows/guards.yml
+
+  consistency:
+    name: Versions agree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: node scripts/check.mjs
+
+  mod:
+    name: ${{ matrix.os }} / Claude Code ${{ matrix.claude }}
+    runs-on: ${{ matrix.os }}
+    # A new Claude Code can change the mod API. The pinned version is the bar;
+    # "latest" is an early warning, so it is allowed to fail without turning the
+    # push red.
+    continue-on-error: ${{ matrix.claude == 'latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, claude: "2.1.289" }
+          - { os: windows-latest, claude: "2.1.289" }
+          - { os: macos-latest, claude: "2.1.289" }
+          - { os: ubuntu-latest, claude: latest }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: npm install --global @anthropic-ai/claude-code@${{ matrix.claude }}
+      - run: claude --version
+
+      # `validate <folder>` checks the marketplace file only. The mod itself, its
+      # hooks module and the calls it makes, is checked through its manifest.
+      - name: Validate the marketplace and the mod
+        run: |
+          claude plugin validate .
+          claude plugin validate .claude-plugin/plugin.json
+
+      - name: Run its tests
+        run: claude plugin test .
+
+      # A check that cannot fail proves nothing. A mod with a hook module that
+      # does not exist has to be refused.
+      - name: The validator refuses a broken mod
+        shell: bash
+        run: |
+          broken=$(mktemp -d)
+          cp -R .claude-plugin hooks types "$broken"/
+          rm -f "$broken/hooks/register.tsx"
+          if claude plugin validate "$broken/.claude-plugin/plugin.json" > /dev/null 2>&1; then
+            echo "::error::the validator accepted a mod whose hook module is missing"
+            exit 1
+          fi
+          echo "refused, as it should"
