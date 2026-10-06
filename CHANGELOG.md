@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-06
+
+### Added
+
+- A resting row above the prompt, always there: the project, how many tools are on, the skill Claude just used, and an **Open Helm** button. The panel is one press away without typing `/helm`.
+
 ## [0.3.0] - 2026-10-06
 
 ### Changed
@@ -56,7 +62,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rlpb/helm/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlpb/helm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlpb/helm/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/rlpb/helm/compare/v0.1.0...v0.1.1

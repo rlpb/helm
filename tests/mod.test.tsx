@@ -156,3 +156,17 @@ test('an off tool that fits is written to the folder only, then Undo takes it ba
   expect(local).toContain('settings.local.json')
   expect(JSON.parse(w.files.get(`${BASE}/settings.json`)!).enabledPlugins['seo@m']).toBe(false)
 })
+
+test('a resting row with an Open button is always above the prompt, in a project or not', async ($, on) => {
+  world($, on)
+  await boot($, PROJECT)
+  await (await band($)).press({ key: 'open' })
+  const rest = await band($)
+  expect(await textOf(rest)).toContain('Helm')
+  expect(await textOf(rest)).toContain('shop')
+  expect(await rest.find({ key: 'helm-open' })).toBeDefined()
+  await boot($, HOME)
+  const home = await band($)
+  expect(await textOf(home)).toContain('no project here')
+  expect(await home.find({ key: 'helm-open' })).toBeDefined()
+})

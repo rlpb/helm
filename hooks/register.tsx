@@ -12,7 +12,7 @@ import { applyPicks, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 import { ITEMS, DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
-import { GLOW_MS, cells, layout, svg } from '../src/graph'
+import { GLOW_MS, cells, glow, layout, svg } from '../src/graph'
 import { Panel } from '../src/views/panel'
 
 const PANE = 'helm'
@@ -324,10 +324,10 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const c = await read($, core)
-    if (e.props.hasSurvey || !c.project) return next(e)
+    if (e.props.hasSurvey) return next(e)
     const { Box, Button, Text } = $.ui.resolve(e)
     const hinted = c.hint ? (c.index ?? []).find(x => x.key === c.hint) : undefined
-    if (hinted && c.state !== 'new') {
+    if (hinted && c.project && c.state !== 'new') {
       return (
         <Box>
           <Text dimColor>{`${hinted.name} is off and fits this. Turn it on `}</Text>
@@ -339,7 +339,27 @@ export const register: Register = on => {
         </Box>
       )
     }
-    if (c.state !== 'new') return next(e)
+    if (!c.project || c.state !== 'new') {
+      // The resting row: always there, so the panel is one press away without typing a command.
+      const now = await $.clock.now()
+      const lit = Object.entries(c.used)
+        .sort((x, y) => y[1] - x[1])
+        .find(([key, at]) => glow({ [key]: at }, key, now) > 0)
+      const litName = lit ? (c.index ?? []).find(x => x.key === lit[0])?.name : undefined
+      const active = (c.index ?? []).filter(x => x.on).length
+      return (
+        <Box justifyContent="space-between">
+          <Box>
+            <Text bold color="claude">
+              Helm
+            </Text>
+            <Text dimColor>{`  ·  ${c.project ? c.project.name : 'no project here'}  ·  ${active} on`}</Text>
+            {litName && <Text color="success">{`  ●  ${litName}`}</Text>}
+          </Box>
+          <Button key="helm-open" label="Open Helm" onPress={() => $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })} />
+        </Box>
+      )
+    }
     return (
       <Box>
         <Text dimColor>New project: {c.project.name}. Set it up with Helm? </Text>
