@@ -16,6 +16,9 @@ A tool for anyone who uses Claude Code: a control panel that assists a project f
 - **Graph:** a real image in the style of Obsidian (nodes with glow, colors per category, nodes light up when a skill is used), drawn with the engine's `Image`/`Raster` elements and repainted with `$.ui.blit`, so it animates at no token cost. Falls back to cells where images are not supported.
 - **During work:** when a skill that is not active is needed, a line offers two ways to say yes (*for this chat*, *always in this project*) and one to say no (*ignore*). Whether a change can apply to the running chat is verified while building: the engine reloads skills when `skillOverrides` changes.
 
+- **Research box:** Helm vets a tool (license, upkeep, risks, overlap), shows a short verdict, and installs only after a yes. A tool added for one project is installed for the user, so it stays a candidate in every other project.
+- **GitHub checkbox:** one generic, professional baseline with one-click standard choices (such as the license), remembered between projects. A small *Details* button opens a box for advanced directives. The baseline is not negotiable: form, security and verification are always done properly.
+
 ## To decide
 
 - The Project tab: the first-prompt box, the GitHub checkbox (only when the GitHub connector is linked).
