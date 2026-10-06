@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
+### Changed
+
+- The panel is redrawn: a header with the project and counts, tabs with the current one highlighted, small-caps section titles, the shortlist as rows with a status dot, the main action in the accent color, the verdict in a card colored by its level, and categories as one quiet line. The panel is now one view (`src/views/panel.tsx`) that never touches the engine.
+
 ## [0.2.0] - 2026-10-06
 
 ### Changed
@@ -50,7 +56,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/rlpb/helm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlpb/helm/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/rlpb/helm/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rlpb/helm/releases/tag/v0.1.0

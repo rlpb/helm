@@ -29,7 +29,7 @@ test('"Not here" is remembered', async ($, on) => {
 test('the home folder is not a project', async ($, on) => {
   world($, on)
   await boot($, HOME)
-  expect(await textOf(await pane($))).toContain('No project here')
+  expect(await textOf(await pane($))).toContain('no project here')
 })
 
 test('describing the project shortlists the fitting tools, and one press turns them on there only', async ($, on) => {
@@ -70,7 +70,7 @@ test('the research box reads a repository and offers an install only after a ver
   await boot($, PROJECT)
   const ui = await pane($)
   await ui.input({ key: 'research', text: 'https://github.com/demo/tool' })
-  expect(await textOf(ui)).toContain('Looks fine.')
+  expect(await textOf(ui)).toContain('Looks fine')
   expect(w.ran.some(a => a[1] === 'plugin' && a[2] === 'install')).toBe(false)
   await ui.press({ key: 'install' })
   expect(w.ran.find(a => a[2] === 'install')).toEqual(['claude', 'plugin', 'install', 'tool@demo', '--scope', 'local'])

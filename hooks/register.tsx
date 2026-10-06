@@ -13,6 +13,7 @@ import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 import { ITEMS, DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
 import { GLOW_MS, cells, layout, svg } from '../src/graph'
+import { Panel } from '../src/views/panel'
 
 const PANE = 'helm'
 let isTerminal = false
@@ -357,180 +358,41 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Input, Raster, Svg, Text } = $.ui.resolve(e as any) as any
+    const ui = $.ui.resolve(e as any) as any
     const c = await read($, core)
     const n = await read($, nav)
     const github = hasGithub(await $.tool.list().catch(() => []))
-    const rows = tally(c.index ?? [])
-    const active = (c.index ?? []).filter(x => x.on).length
-    const tabs = (
-      <Box>
-        <Button key="project" label={n.tab === 'project' ? '[Project]' : 'Project'} onPress={() => update($, nav, () => ({ tab: 'project' }))} />
-        <Text> </Text>
-        <Button key="global" label={n.tab === 'global' ? '[Global]' : 'Global'} onPress={() => update($, nav, () => ({ tab: 'global' }))} />
-        <Text> </Text>
-        <Button key="graph" label={n.tab === 'graph' ? '[Map]' : 'Map'} onPress={() => update($, nav, () => ({ tab: 'graph' }))} />
-      </Box>
-    )
+    const terminal = e.surface === 'terminal'
+    const width = Math.max(40, Math.min(e.props.bodyColumns ?? 80, 100))
+    let map: any = null
     if (n.tab === 'graph') {
       const now = await $.clock.now()
       const lay = layout(c.index ?? [])
-      const columns = Math.max(40, Math.min(e.props.bodyColumns ?? 80, 100))
-      const lines = 16
-      isTerminal = e.surface === 'terminal'
-      return (
-        <Box flexDirection="column">
-          {tabs}
-          {e.surface === 'terminal' ? (
-            <Raster key="map" columns={columns} rows={lines} cells={cells(lay, c.used, now, columns, lines)} />
-          ) : (
-            <Svg source={svg(lay, c.used, now)} alt="Map of installed tools, lit when used" />
-          )}
-          <Text dimColor>Lit dots are tools Claude just used.</Text>
-        </Box>
+      isTerminal = terminal
+      map = terminal ? (
+        <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16)} />
+      ) : (
+        <ui.Svg source={svg(lay, c.used, now)} alt="Map of installed tools, lit when used" />
       )
     }
-    return (
-      <Box flexDirection="column">
-        {tabs}
-        <Text bold>{n.tab === 'project' ? (c.project ? c.project.name : 'No project here') : 'Everything installed'}</Text>
-        {c.index === null && <Text dimColor>Reading what is installed…</Text>}
-        {c.index !== null && (
-          <Text dimColor>
-            {`${c.index.length} installed, ${active} on`}
-          </Text>
-        )}
-        {n.tab === 'project' && c.project && (
-          <Input
-            key="ask"
-            label="What are you building? "
-            placeholder="a web shop, a CLI tool, a data report…"
-            value={c.ask?.text ?? ''}
-            submitLabel="find tools"
-            onSubmit={text => update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } }))}
-          />
-        )}
-        {n.tab === 'project' && c.project && github && (
-          <Box flexDirection="column">
-            <Button
-              key="gh"
-              label={`${c.setup.on ? '[x]' : '[ ]'} Set up GitHub to professional standards`}
-              onPress={() => setSetup($, s => ({ ...s, on: !s.on }))}
-            />
-            {c.setup.on && (
-              <Box flexDirection="column">
-                <Button key="license" label={`License: ${c.setup.license} (change)`} onPress={() => setSetup($, s => ({ ...s, license: nextLicense(s.license) }))} />
-                <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
-                  {ITEMS.map(i => (
-                    <Button key={`i-${i.id}`} label={`${c.setup.items.includes(i.id) ? '[x]' : '[ ]'} ${i.label}`} onPress={() => setSetup($, toggleItem(i.id))} />
-                  ))}
-                </Box>
-                <Input
-                  key="details"
-                  label="Details: "
-                  placeholder="extra directions, e.g. a private repo, a Ko-fi link"
-                  value={c.setup.details}
-                  submitLabel="save"
-                  onSubmit={text => setSetup($, s => ({ ...s, details: text }))}
-                />
-                <Text dimColor>Added once to your first prompt in this project.</Text>
-              </Box>
-            )}
-          </Box>
-        )}
-        {n.tab === 'project' && c.ask && (
-          <Box flexDirection="column">
-            {c.ask.picks.length === 0 && <Text dimColor>Nothing installed fits that yet.</Text>}
-            {c.ask.picks.map(key => {
-              const entry = (c.index ?? []).find(x => x.key === key)
-              return entry ? (
-                <Text key={key}>
-                  {entry.on ? '● ' : '○ '}
-                  {entry.name} <Text dimColor>{entry.description}</Text>
-                </Text>
-              ) : null
-            })}
-            {shortlist(c.index ?? [], c.ask.text, 12).length > 1 && (
-              <Button
-                key="refine"
-                label={`Refine with a small model (about ${estimateTokens(refinePrompt((c.index ?? []).filter(x => shortlist(c.index ?? [], c.ask!.text, 12).includes(x.key)), c.ask.text))} tokens)`}
-                onPress={() => refine($)}
-              />
-            )}
-            {c.ask.picks.some(k => (c.index ?? []).some(x => x.key === k && !x.on)) && (
-              <Box>
-                <Button key="here" label="Turn on for this project" onPress={() => turnOnHere($)} />
-                <Text> </Text>
-                <Button key="undo" label="Undo" onPress={() => undoHere($)} />
-              </Box>
-            )}
-          </Box>
-        )}
-        {n.tab === 'global' && (
-          <Box flexDirection="column">
-            <Box>
-              <Button key="check" label="Tidy up" onPress={() => runCheckup($)} />
-              <Text> </Text>
-              <Button key="update" label="Update all" onPress={() => runUpdate($)} />
-            </Box>
-            {(c.report ?? []).map(i => (
-              <Box key={i.key + i.kind}>
-                <Text>{i.text} </Text>
-                {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? 'Press again to remove' : 'Remove'} onPress={() => fixIssue($, i.key)} />}
-              </Box>
-            ))}
-          </Box>
-        )}
-        {n.tab === 'global' && c.candidates.length > 0 && (
-          <Box flexDirection="column">
-            <Text dimColor>Added for one project, make global?</Text>
-            {c.candidates.map(repo => (
-              <Box key={repo}>
-                <Text>{repo} </Text>
-                <Button key={`g-${repo}`} label="Install for all" onPress={() => globalInstall($, repo)} />
-              </Box>
-            ))}
-          </Box>
-        )}
-        {c.hits && (
-          <Box flexDirection="column">
-            {c.hits.map(h => (
-              <Box key={h.repo}>
-                <Button key={`h-${h.repo}`} label={h.repo} onPress={() => pickHit($, h.repo)} />
-                <Text dimColor>{` ${h.stars}★ ${h.description.slice(0, 60)}`}</Text>
-              </Box>
-            ))}
-          </Box>
-        )}
-        {c.found && (
-          <Box flexDirection="column">
-            <Text bold>
-              {c.found.meta.repo} <Text dimColor>{`${c.found.meta.license ?? "no license"}, ${c.found.meta.stars}★`}</Text>
-            </Text>
-            <Text>{c.found.verdict.level === 'ok' ? 'Looks fine.' : c.found.verdict.level === 'caution' ? 'Check before you install:' : 'Do not install:'}</Text>
-            {c.found.verdict.reasons.map(reason => (
-              <Text key={reason} dimColor>
-                · {reason}
-              </Text>
-            ))}
-            {c.found.verdict.level !== 'no' && (
-              <Button
-                key="install"
-                label={n.tab === 'project' && c.project ? 'Yes, install for this project' : 'Yes, install for all'}
-                onPress={() => install($, n.tab === 'project' && c.project ? 'local' : 'user')}
-              />
-            )}
-          </Box>
-        )}
-        <Input key="research" label="Find a tool: " placeholder="GitHub link, owner/name, or a name" submitLabel="look" onSubmit={text => research($, text)} />
-        {c.message && <Text dimColor>{c.message}</Text>}
-        {(n.tab === 'global' || !(c.ask || c.found || c.hits)) &&
-          rows.map(r => (
-            <Text key={r.category}>
-              {`${r.category}: ${r.on}/${r.total}`}
-            </Text>
-          ))}
-      </Box>
-    )
+    const act = {
+      tab: (tab: Nav['tab']) => void update($, nav, () => ({ tab })),
+      ask: (text: string) => void update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } })),
+      refine: () => void refine($),
+      turnOn: () => void turnOnHere($),
+      undo: () => void undoHere($),
+      gh: () => void setSetup($, s => ({ ...s, on: !s.on })),
+      license: () => void setSetup($, s => ({ ...s, license: nextLicense(s.license) })),
+      item: (id: string) => void setSetup($, toggleItem(id)),
+      details: (text: string) => void setSetup($, s => ({ ...s, details: text })),
+      research: (text: string) => void research($, text),
+      pick: (repo: string) => void pickHit($, repo),
+      install: (scope: 'user' | 'local') => void install($, scope),
+      check: () => void runCheckup($),
+      update: () => void runUpdate($),
+      fix: (key: string) => void fixIssue($, key),
+      makeGlobal: (repo: string) => void globalInstall($, repo),
+    }
+    return Panel({ ui, c, n, github, act, terminal, width, map })
   })
 }
