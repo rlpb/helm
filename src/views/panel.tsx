@@ -80,7 +80,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     </Text>
   )
   const card = (key: string, children: any, borderColor = 'subtle') => (
-    <Box key={key} flexDirection="column" marginTop={1} borderStyle="round" borderColor={borderColor} paddingX={1}>
+    <Box key={`card-${key}`} flexDirection="column" marginTop={1} borderStyle="round" borderColor={borderColor} paddingX={1}>
       {children}
     </Box>
   )
@@ -130,7 +130,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
       {c.hits && (
         <Box flexDirection="column" marginTop={1}>
           {c.hits.map(h => (
-            <Box key={h.repo} columnGap={1}>
+            <Box key={`hit-${h.repo}`} columnGap={1}>
               <Button key={`h-${h.repo}`} label={h.repo} onPress={() => act.pick(h.repo)} />
               <Text dimColor wrap="truncate-end">{`${h.stars}★  ${h.description}`}</Text>
             </Box>
@@ -156,7 +156,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           ))}
           {c.scanner.state === 'missing' && (
             <Box marginTop={1}>
-              <Button key="scanner-install" label={T('sec.install')} onPress={act.installScanner} />
+              <Button key="scanner-install-found" label={T('sec.install')} onPress={act.installScanner} />
             </Box>
           )}
           {isOverridable(c.found) && (
@@ -199,7 +199,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
               const entry = index.find(x => x.key === key)
               if (!entry) return null
               return (
-                <Box key={key} flexDirection="column" marginTop={1}>
+                <Box key={`row-${key}`} flexDirection="column" marginTop={1}>
                   <Box columnGap={1}>
                     <Text color={entry.on ? hex(entry.category) : 'inactive'}>{entry.on ? '●' : '○'}</Text>
                     <Text bold>{entry.name}</Text>
@@ -279,7 +279,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
   const never = index.filter(x => !c.uses[x.key]?.n).length
   const tw = Math.max(26, Math.floor((width - 1) / 2))
   const tile = (key: string, color: string, children: any) => (
-    <Box key={key} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} width={tw}>
+    <Box key={`tile-${key}`} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} width={tw}>
       {children}
     </Box>
   )
@@ -292,7 +292,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           {title(T('g.health'), report && report.length > 0 ? '#f2b84b' : '#6fd08c')}
           {report === null ? <Text dimColor>·</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
           {(report ?? []).map(i => (
-            <Box key={i.key + i.kind} flexDirection="column" marginTop={1}>
+            <Box key={`issue-${i.key}${i.kind}`} flexDirection="column" marginTop={1}>
               <Text>{issueText(i)}</Text>
               {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? T('g.again') : T('g.remove')} onPress={() => act.fix(i.key)} />}
             </Box>
@@ -326,7 +326,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           {flaggedList.slice(0, 4).map(([key, s]) => {
             const entry = index.find(x => x.key === key)
             return (
-              <Box key={key} flexDirection="column" marginTop={1}>
+              <Box key={`row-${key}`} flexDirection="column" marginTop={1}>
                 <Text>{`${entry?.name ?? key} · ${s.score}/100`}</Text>
                 <Text dimColor wrap="truncate-end">{s.top[0] ? `${s.top[0].pattern} · ${s.top[0].where}` : s.recommendation}</Text>
                 {entry && <Button key={`sw-${key}`} label={entry.on ? T('sec.off') : T('sec.on')} onPress={() => act.toggle(key)} />}
@@ -364,7 +364,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           <Box flexDirection="column">
             {title(T('g.promote'), '#f2b84b')}
             {c.candidates.map(repo => (
-              <Box key={repo} columnGap={1}>
+              <Box key={`cand-${repo}`} columnGap={1}>
                 <Text>{repo}</Text>
                 <Button key={`g-${repo}`} label={T('g.installAll')} onPress={() => act.makeGlobal(repo)} />
               </Box>

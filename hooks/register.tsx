@@ -600,6 +600,16 @@ export const register: Register = on => {
       toggle: (key: string) => void toggleTool($, key),
       anyway: (scope: 'user' | 'local') => void installAnyway($, scope),
     }
-    return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
+    try {
+      return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
+    } catch (err) {
+      // A panel that cannot draw says why, instead of the engine's empty "nothing to show".
+      return (
+        <ui.Box flexDirection="column">
+          <ui.Text bold color="claude">Helm</ui.Text>
+          <ui.Text color="error">{`The panel could not be drawn: ${String((err as Error)?.message ?? err).slice(0, 300)}`}</ui.Text>
+        </ui.Box>
+      )
+    }
   })
 }

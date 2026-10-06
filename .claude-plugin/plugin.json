@@ -1,6 +1,6 @@
 {
   "name": "helm",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "The control panel for Claude Code: it sets up each project with the right skills and tools, shows what is in use, and vets new tools before you add them.",
   "author": {
     "name": "rlpb",

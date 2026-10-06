@@ -88,7 +88,7 @@ describe('the scanner in the panel', () => {
     await ui.input({ key: 'research', text: 'demo/tool' })
     expect(await textOf(ui)).toContain('Check before you install')
     expect(await textOf(ui)).toContain('Not scanned')
-    await ui.press({ key: 'scanner-install' })
+    await ui.press({ key: 'scanner-install-found' })
     expect(w.ran.find(a => a[0] === 'uv')).toEqual(['uv', 'tool', 'install', 'git+https://github.com/NVIDIA/skillspector.git'])
   })
 

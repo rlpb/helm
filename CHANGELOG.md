@@ -6,6 +6,14 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-06
+
+### Fixed
+
+- **The panel drew nothing** in the desktop app ("Nothing to show yet"). Two elements shared a key (a card and a button named `ask`, another pair `gh`), and the engine refuses a tree with a repeated key. Every box now has its own prefixed key, and a test walks every tab and state on the terminal and the desktop surface and fails on any repeat.
+- If the panel ever cannot be drawn, it now says why instead of leaving the pane empty.
+- The row above the prompt no longer reads "Helm Helm" in a folder called Helm: it is `Helm › project`.
+
 ## [0.7.1] - 2026-10-06
 
 ### Changed
@@ -102,7 +110,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/rlpb/helm/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlpb/helm/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rlpb/helm/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rlpb/helm/compare/v0.5.0...v0.6.0

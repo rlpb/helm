@@ -72,7 +72,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
           <Text bold color="claude">
             Helm
           </Text>
-          <Text dimColor>{c.project ? `${c.project.name}  ·  ${active}/${index.length}` : t(lang, 'head.none')}</Text>
+          <Text dimColor>{c.project ? `›  ${c.project.name}  ·  ${active}/${index.length}` : `›  ${t(lang, 'head.none')}`}</Text>
         </Box>
         {meters.map(m => Meter({ ui, terminal, id: m.id, label: m.label, pct: m.pct }))}
         <Box>
