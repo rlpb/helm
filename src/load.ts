@@ -49,3 +49,18 @@ export async function loadIndex(disk: Disk, configDir: string, settings: Setting
   }
   return buildIndex({ plugins, skills })
 }
+
+/** The folders a scan can read: each plugin where it is installed, each own skill in the skills folder. */
+export async function scanTargets(disk: Disk, configDir: string, index: Entry[]): Promise<{ key: string; path: string }[]> {
+  const installed = (await json(disk, `${configDir}/plugins/installed_plugins.json`))?.plugins ?? {}
+  const out: { key: string; path: string }[] = []
+  for (const e of index) {
+    if (e.kind === 'plugin') {
+      const where = installed[e.key.slice(7)]?.[0]?.installPath
+      if (where) out.push({ key: e.key, path: String(where).replace(/\\/g, '/') })
+    } else if (SAFE.test(e.key.slice(6))) {
+      out.push({ key: e.key, path: `${configDir}/skills/${e.key.slice(6)}` })
+    }
+  }
+  return out
+}

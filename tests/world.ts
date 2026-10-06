@@ -14,6 +14,8 @@ type Options = {
   /** The computer's language, as LANG says it. */
   lang?: string
   tools?: { name: string; mcp: boolean }[]
+  /** The scanner: `missing` is not installed; otherwise what a scan of a target returns (a SAFE report by default). */
+  scanner?: 'missing' | ((target: string) => object)
   store?: Record<string, unknown>
   run?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }
 }
@@ -79,7 +81,17 @@ export function world($: any, on: any, options: Options = {}) {
   const ran: string[][] = []
   on('process.run', (_$: any, e: any) => {
     ran.push([...e.argv])
-    const result = options.run?.([...e.argv]) ?? { exitCode: 0, stdout: '', stderr: '' }
+    const argv: string[] = [...e.argv]
+    let result: { exitCode: number; stdout: string; stderr: string } | undefined
+    if (argv[0] === 'skillspector') {
+      if (options.scanner === 'missing') result = { exitCode: 127, stdout: '', stderr: 'not found' }
+      else if (argv[1] === '--version') result = { exitCode: 0, stdout: 'SkillSpector v2.12.0', stderr: '' }
+      else {
+        const report = typeof options.scanner === 'function' ? options.scanner(argv[2]) : { risk_assessment: { score: 0, severity: 'LOW', recommendation: 'SAFE', max_issue_severity: 'NONE' }, issues: [] }
+        result = { exitCode: 0, stdout: JSON.stringify(report), stderr: '' }
+      }
+    }
+    result ??= options.run?.(argv) ?? { exitCode: 0, stdout: '', stderr: '' }
     return { value: { isStdoutTruncated: false, isStderrTruncated: false, ...result } }
   })
   const started = { cwd: HOME }

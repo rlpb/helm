@@ -22,13 +22,13 @@ const PLUGINS = {
   'diagrams@community': 'Draw architecture diagrams and visual flows',
 }
 
-type Shot = { name: string; band?: boolean; open?: boolean; tab?: string; sub?: string; ask?: string; github?: boolean; research?: string; tidy?: boolean }
+type Shot = { name: string; band?: boolean; open?: boolean; tab?: string; sub?: string; ask?: string; github?: boolean; research?: string; tidy?: boolean; scan?: boolean }
 const SHOTS: Shot[] = [
   { name: 'band', band: true },
   { name: 'rest', band: true, open: true },
   { name: 'project', ask: 'a report with charts and citations', github: true },
   { name: 'research', sub: 'sub-discover', research: 'https://github.com/example/citation-tools' },
-  { name: 'global', tab: 'global', tidy: true },
+  { name: 'global', tab: 'global', tidy: true, scan: true },
   { name: 'map', tab: 'graph' },
 ]
 
@@ -56,6 +56,7 @@ for (const shot of SHOTS) {
         own('brand-voice', 'Write in the house tone'),
         ...(shot.tidy ? [[`${BASE}/skills/half-done/notes.txt`, 'x'] as [string, string]] : []),
       ],
+      scanner: target => (target.endsWith('humanizer') ? { risk_assessment: { score: 62, severity: 'HIGH', recommendation: 'CAUTION', max_issue_severity: 'HIGH' }, issues: [{ severity: 'HIGH', pattern: 'External Script Fetching', location: { file: 'SKILL.md', start_line: 31 } }] } : { risk_assessment: { score: 0, severity: 'LOW', recommendation: 'SAFE', max_issue_severity: 'NONE' }, issues: [] }),
       run: argv => {
         if (argv[0] !== 'gh') return { exitCode: 0, stdout: '', stderr: '' }
         const url = argv.join(' ')
@@ -81,6 +82,7 @@ for (const shot of SHOTS) {
     if (shot.github) await ui.press({ key: 'gh' })
     if (shot.research) await ui.input({ key: 'research', text: shot.research })
     if (shot.tidy) await ui.press({ key: 'check' })
+    if (shot.scan) await ui.press({ key: 'scan' })
     console.log(`HELM-SHOT ${shot.name} ${JSON.stringify({ columns: 76, tree: await ui.drawn() })}`)
   })
 }

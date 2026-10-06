@@ -9,3 +9,6 @@ separate product of Anthropic and is not distributed as part of this one.
 
 The picture docs/art/backdrop.jpg was generated with ByteDance Seedream 5.0 Pro
 through OpenRouter. No third-party code or assets are redistributed.
+
+Helm can install and run SkillSpector (https://github.com/NVIDIA/SkillSpector, Apache-2.0, NVIDIA)
+as a separate program when the user asks. It is not distributed as part of this product.

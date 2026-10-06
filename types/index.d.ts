@@ -46,16 +46,21 @@ export type Meta = {
 }
 
 /** Why a tool got its verdict: a code the panel turns into a sentence, and a number when one is needed. */
-export type Reason = { k: 'archived' | 'noform' | 'nolicense' | 'idle' | 'stars'; n?: number }
+export type Reason = { k: 'archived' | 'noform' | 'nolicense' | 'idle' | 'stars' | 'scanhigh' | 'scanmid' | 'unscanned' | 'noscanner' | 'testsOnly'; n?: number }
 
 export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: Reason[] }
 
 /** A tool the person asked about: what it is and what Helm thinks. */
-export type Found = { meta: Meta; verdict: Verdict }
+export type Found = { meta: Meta; verdict: Verdict; scan?: ScanResult | null }
 export type Hit = { repo: string; description: string; stars: number }
 
 /** The GitHub baseline the person chose, kept across sessions. */
 export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
+
+/** What SkillSpector said about one skill or plugin: the score, and the worst findings outside tests and docs. */
+export type ScanResult = { score: number; severity: string; recommendation: string; flagged: number; top: { sev: string; pattern: string; where: string }[]; testOnly: number }
+
+export type Scanner = { state: 'unknown' | 'missing' | 'ready'; version: string | null }
 
 export type Lang = 'en' | 'it' | 'es' | 'fr' | 'de' | 'pt' | 'nl' | 'ru' | 'zh' | 'ja' | 'ko' | 'hi' | 'ar' | 'tr' | 'pl' | 'id'
 
@@ -63,6 +68,13 @@ export type Lang = 'en' | 'it' | 'es' | 'fr' | 'de' | 'pt' | 'nl' | 'ru' | 'zh' 
 export type Usage = { five: number | null; week: number | null; ctx: number | null }
 
 export type Core = {
+  /** The security scanner: installed or not, and its version. */
+  scanner: Scanner
+  /** The latest scan of each installed plugin and skill, by key. */
+  scans: Record<string, ScanResult>
+  scanning: { done: number; total: number } | null
+  /** The repository whose "install anyway" awaits a second press. */
+  anyway: string | null
   /** The language shown, and the person's choice (`auto` follows the computer). */
   lang: Lang
   pref: Lang | 'auto'

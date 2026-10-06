@@ -1,17 +1,18 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Core, Found, Hit, Meta, Nav, ProjectState, Setup } from '../types'
+import type { Core, Found, Hit, Meta, Nav, ProjectState, ScanResult, Setup } from '../types'
 import { installPlan, judge, parseTarget } from '../src/research'
-import { loadIndex } from '../src/load'
+import { loadIndex, scanTargets } from '../src/load'
 import { shortlist } from '../src/shortlist'
 import { hintFor, parseChoice, refinePrompt } from '../src/suggest'
 import { isProject, localSettings, projectKey, projectName } from '../src/project'
-import { applyPicks, undoPicks } from '../src/apply'
+import { applyPicks, setSkillOff, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 import { DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
 import { GLOW_MS, cells, glow, layout, svg } from '../src/graph'
+import { foldVerdict, installCmd, isOverridable, parseScan, parseVersion, repoTarget, scanCmd, upgradeCmd, versionCmd } from '../src/skillspector'
 import { detectLang, isLang, t } from '../src/i18n'
 import type { Key, Lang } from '../src/i18n'
 import { Band } from '../src/views/band'
@@ -24,6 +25,10 @@ let fading = false
 const core = atom(
   { plugin: 'helm', key: 'core' } as const,
   {
+    scanner: { state: 'unknown', version: null },
+    scans: {},
+    scanning: null,
+    anyway: null,
     lang: 'en',
     pref: 'auto',
     usage: null,
@@ -205,6 +210,7 @@ async function runUpdate($: any) {
     const r = await $.process.run(argv, { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
     if (r.exitCode === 0) ok += 1
   }
+  if (c.scanner.state === 'ready') await updateScanner($, true)
   await say($, 'msg.updated', ok, ids.length)
 }
 
@@ -254,7 +260,16 @@ async function inspect($: any, repo: string): Promise<Found | null> {
     marketplace,
     isSkill: skill.exitCode === 0,
   }
-  return { meta, verdict: judge(meta, await $.clock.now()) }
+  let verdict = judge(meta, await $.clock.now())
+  const scanner = (await read($, core)).scanner.state
+  const target = repoTarget(meta.repo)
+  let scan: ScanResult | null = null
+  if (verdict.level !== 'no' && target && scanner === 'ready') {
+    await say($, 'msg.scanning')
+    scan = await scanOne($, target)
+  }
+  if (verdict.level !== 'no') verdict = foldVerdict(verdict, scan, scanner)
+  return { meta, verdict, scan }
 }
 
 async function research($: any, input: string) {
@@ -278,9 +293,9 @@ async function research($: any, input: string) {
 }
 
 /** Installs after the person's yes. In a project the plugin is installed for that folder only, and remembered as a global candidate. */
-async function install($: any, scope: 'user' | 'local') {
+async function install($: any, scope: 'user' | 'local', force = false) {
   const c = await read($, core)
-  if (!c.found || c.found.verdict.level === 'no') return
+  if (!c.found || (c.found.verdict.level === 'no' && !force)) return
   const plan = installPlan(c.found.meta, scope, `${c.dir}/skills`)
   if (!plan) return say($, 'msg.unknownForm')
   await say($, 'msg.installing')
@@ -317,6 +332,85 @@ async function setSetup($: any, change: (s: Setup) => Setup) {
 
 const toggleItem = (id: string) => (s: Setup): Setup => ({ ...s, items: s.items.includes(id) ? s.items.filter(x => x !== id) : [...s.items, id] })
 
+
+// ---- the security scanner: SkillSpector, by NVIDIA ----
+
+const WEEK = 7 * 86_400_000
+
+/** Whether SkillSpector answers, and which version. */
+async function probeScanner($: any) {
+  const r = await $.process.run(versionCmd(), { timeoutMs: 20_000 }).catch(() => null)
+  const version = r && r.exitCode === 0 ? parseVersion(String(r.stdout ?? '')) : null
+  await update($, core, s => ({ ...s, scanner: version ? { state: 'ready', version } : { state: 'missing', version: null } }))
+}
+
+/** One scan: the report comes on stdout, and exit 1 only means "do not install". */
+async function scanOne($: any, target: string): Promise<ScanResult | null> {
+  const r = await $.process.run(scanCmd(target), { timeoutMs: 180_000 }).catch(() => null)
+  return r ? parseScan(String(r.stdout ?? '')) : null
+}
+
+async function installScanner($: any) {
+  await say($, 'msg.installing')
+  const r = await $.process.run(installCmd(), { timeoutMs: 600_000 }).catch(() => null)
+  if (!r || r.exitCode !== 0) return say($, 'msg.noUv')
+  await probeScanner($)
+  await say($, 'msg.scannerInstalled')
+}
+
+/** Keeps the scanner current: by hand with Update all, and on its own once a week. */
+async function updateScanner($: any, quiet = false) {
+  const r = await $.process.run(upgradeCmd(), { timeoutMs: 600_000 }).catch(() => null)
+  if (r && r.exitCode === 0) {
+    await probeScanner($)
+    if (!quiet) await say($, 'msg.scannerUpdated')
+  }
+}
+
+/** Scans every installed plugin and own skill, one after the other, and keeps the results. */
+async function runScan($: any) {
+  const c = await read($, core)
+  if (c.scanner.state !== 'ready') return
+  const targets = await scanTargets(disk($), c.dir, c.index ?? [])
+  const scans: Record<string, ScanResult> = {}
+  for (const [i, target] of targets.entries()) {
+    await update($, core, s => ({ ...s, scanning: { done: i, total: targets.length }, message: null }))
+    const result = await scanOne($, target.path)
+    if (result) scans[target.key] = result
+  }
+  const bad = Object.values(scans).filter(s => s.recommendation !== 'SAFE' && s.flagged > 0).length
+  await $.store.set('scans', scans)
+  await update($, core, s => ({ ...s, scans, scanning: null, message: t(c.lang, 'msg.scanDone', targets.length, bad) }))
+}
+
+/** Switches a tool off or on at the user level: a plugin through the CLI, a skill through skillOverrides. Reversible. */
+async function toggleTool($: any, key: string) {
+  const c = await read($, core)
+  const entry = (c.index ?? []).find(x => x.key === key)
+  if (!entry) return
+  const off = entry.on
+  if (entry.kind === 'plugin') {
+    const r = await $.process.run(['claude', 'plugin', off ? 'disable' : 'enable', key.slice(7)], { timeoutMs: 60_000 }).catch(() => null)
+    if (!r || r.exitCode !== 0) return say($, 'msg.cannotFix', entry.name)
+  } else {
+    const file = `${c.dir}/settings.json`
+    const text = (await $.fs.exists(file)) ? ((await $.fs.read(file)) as string) : ''
+    const next = setSkillOff(text, key.slice(6), off)
+    if (next === null) return say($, 'msg.badjson')
+    await $.fs.write(file, next)
+  }
+  await update($, core, s => ({ ...s, index: (s.index ?? []).map(x => (x.key === key ? { ...x, on: !off } : x)), message: t(c.lang, off ? 'msg.switchedOff' : 'msg.switchedOn', entry.name) }))
+}
+
+/** "Install anyway": only when the scanner alone said no, and only on a second press. */
+async function installAnyway($: any, scope: 'user' | 'local') {
+  const c = await read($, core)
+  if (!c.found || !isOverridable(c.found)) return
+  if (c.anyway !== c.found.meta.repo) return void (await update($, core, s => ({ ...s, anyway: c.found!.meta.repo })))
+  await update($, core, s => ({ ...s, anyway: null }))
+  await install($, scope, true)
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -352,8 +446,16 @@ export const register: Register = on => {
     const saidPref = await $.store.get('lang-pref')
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
-    await update($, core, () => ({ lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
     await refreshUsage($)
+    await probeScanner($)
+    const checked = Number((await $.store.get('scanner-checked')) ?? 0)
+    const now = await $.clock.now()
+    if ((await read($, core)).scanner.state === 'ready' && now - checked > WEEK) {
+      await $.store.set('scanner-checked', now)
+      void updateScanner($, true)
+    }
     return started
   })
 
@@ -470,6 +572,10 @@ export const register: Register = on => {
       update: () => void runUpdate($),
       fix: (key: string) => void fixIssue($, key),
       makeGlobal: (repo: string) => void globalInstall($, repo),
+      scan: () => void runScan($),
+      installScanner: () => void installScanner($),
+      toggle: (key: string) => void toggleTool($, key),
+      anyway: (scope: 'user' | 'local') => void installAnyway($, scope),
     }
     return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
   })

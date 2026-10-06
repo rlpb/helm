@@ -38,7 +38,7 @@ signed with a short-lived certificate GitHub issues to the workflow run that
 made it. It names the repository, the workflow and the commit:
 
 ```bash
-gh attestation verify helm-0.5.0.zip --repo rlpb/helm
+gh attestation verify helm-0.6.0.zip --repo rlpb/helm
 ```
 
 The command exits with an error for a file this repository's release workflow

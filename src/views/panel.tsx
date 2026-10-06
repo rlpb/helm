@@ -8,6 +8,7 @@ import { LANGS, t } from '../i18n'
 import type { Key, Lang } from '../i18n'
 import { shortlist } from '../shortlist'
 import { estimateTokens, refinePrompt } from '../suggest'
+import { flagged, isOverridable } from '../skillspector'
 import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
@@ -30,12 +31,27 @@ export type Act = {
   update: () => void
   fix: (key: string) => void
   makeGlobal: (repo: string) => void
+  scan: () => void
+  installScanner: () => void
+  toggle: (key: string) => void
+  anyway: (scope: 'user' | 'local') => void
 }
 
 type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; map?: any; now: number; lang: Lang }
 
 const LEVEL = { ok: 'success', caution: 'warning', no: 'error' } as const
-const WHY: Record<string, Key> = { archived: 'why.archived', noform: 'why.noform', nolicense: 'why.nolicense', idle: 'why.idle', stars: 'why.stars' }
+const WHY: Record<string, Key> = {
+  archived: 'why.archived',
+  noform: 'why.noform',
+  nolicense: 'why.nolicense',
+  idle: 'why.idle',
+  stars: 'why.stars',
+  scanhigh: 'why.scanhigh',
+  scanmid: 'why.scanmid',
+  unscanned: 'why.unscanned',
+  noscanner: 'why.noscanner',
+  testsOnly: 'why.testsOnly',
+}
 const ISSUE: Record<string, Key> = { 'stale-plugin': 'issue.stale', 'broken-skill': 'issue.broken', 'no-description': 'issue.nodesc', duplicate: 'issue.dup' }
 const ITEM_LABEL: Record<string, Key> = { license: 'gh.licenseFile', protection: 'gh.branch', community: 'gh.contributing' }
 
@@ -133,6 +149,21 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           {c.found.verdict.reasons.map(r => (
             <Text key={r.k} dimColor>{`· ${T(WHY[r.k], r.n ?? 0)}`}</Text>
           ))}
+          {(c.found.scan?.top ?? []).map(f => (
+            <Text key={`${f.pattern}${f.where}`} dimColor wrap="truncate-end">
+              {`  ${f.sev.toLowerCase()} · ${f.pattern} · ${f.where}`}
+            </Text>
+          ))}
+          {c.scanner.state === 'missing' && (
+            <Box marginTop={1}>
+              <Button key="scanner-install" label={T('sec.install')} onPress={act.installScanner} />
+            </Box>
+          )}
+          {isOverridable(c.found) && (
+            <Box marginTop={1}>
+              <Button key="anyway" label={c.anyway === c.found.meta.repo ? T('sec.anywayAgain') : T('sec.anyway')} onPress={() => act.anyway(here && n.tab === 'project' ? 'local' : 'user')} />
+            </Box>
+          )}
           {c.found.verdict.level !== 'no' && (
             <Box marginTop={1}>
               <Button key="install" label={here && n.tab === 'project' ? T('install.here') : T('install.all')} variant="primary" onPress={() => act.install(here && n.tab === 'project' ? 'local' : 'user')} />
@@ -244,6 +275,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     .filter(([key]) => index.some(x => x.key === key))
     .sort((a, b) => b[1].n - a[1].n)
     .slice(0, 5)
+  const flaggedList = flagged(c.scans)
   const never = index.filter(x => !c.uses[x.key]?.n).length
   const tw = Math.max(26, Math.floor((width - 1) / 2))
   const tile = (key: string, color: string, children: any) => (
@@ -278,6 +310,31 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           <Text dimColor>{T('g.updatesText')}</Text>
           <Box marginTop={1}>
             <Button key="update" label={T('g.update')} onPress={act.update} />
+          </Box>
+        </Box>,
+      )}
+      {tile(
+        'security',
+        flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c',
+        <Box flexDirection="column">
+          {title(T('sec.title'), flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c')}
+          {c.scanner.state === 'missing' && <Text dimColor>{T('sec.missing')}</Text>}
+          {c.scanner.state === 'ready' && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
+          {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done + 1, c.scanning.total)}</Text>}
+          {!c.scanning && c.scanner.state === 'ready' && Object.keys(c.scans).length > 0 && flaggedList.length === 0 && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
+          {flaggedList.length > 0 && <Text color="error" bold>{`▲ ${T('sec.flagged', flaggedList.length)}`}</Text>}
+          {flaggedList.slice(0, 4).map(([key, s]) => {
+            const entry = index.find(x => x.key === key)
+            return (
+              <Box key={key} flexDirection="column" marginTop={1}>
+                <Text>{`${entry?.name ?? key} · ${s.score}/100`}</Text>
+                <Text dimColor wrap="truncate-end">{s.top[0] ? `${s.top[0].pattern} · ${s.top[0].where}` : s.recommendation}</Text>
+                {entry && <Button key={`sw-${key}`} label={entry.on ? T('sec.off') : T('sec.on')} onPress={() => act.toggle(key)} />}
+              </Box>
+            )
+          })}
+          <Box marginTop={1}>
+            {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} variant="primary" onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} variant="primary" onPress={act.installScanner} />}
           </Box>
         </Box>,
       )}

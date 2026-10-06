@@ -6,6 +6,15 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-06
+
+### Added
+
+- **Security scanning with [SkillSpector](https://github.com/NVIDIA/SkillSpector) (NVIDIA, Apache-2.0).** A **Security** tile in Global with a **Scan skills** button that checks every installed plugin and own skill for prompt injection, data theft and risky code, lists what is flagged with the worst finding, and switches a skill off or on again in one press.
+- **Every new tool is scanned before it can be installed.** The result joins the verdict: a clean scan changes nothing, a caution is shown with its findings, and a "do not install" hides the Install button. Only when the scanner alone said no, **Install anyway** appears and needs a second press. Findings that sit only in tests, docs or examples do not count against a tool.
+- SkillSpector is installed on a yes (`uv tool install`), updated by **Update all** and once a week on its own. It always runs static-only (`--no-llm`): no model, no API key, nothing leaves the computer.
+- Twenty-four new phrases in all 16 languages.
+
 ## [0.5.0] - 2026-10-06
 
 ### Added
@@ -77,7 +86,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/rlpb/helm/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rlpb/helm/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlpb/helm/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlpb/helm/compare/v0.2.0...v0.3.0

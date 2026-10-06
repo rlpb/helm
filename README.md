@@ -21,6 +21,7 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 - **See what is in use.** The **Map** tab draws everything installed as a live graph. When Claude uses a skill, its dot lights up and gets a name; pick any skill to see what it does, how often and when it ran. It costs no tokens.
 - **Keep your limits in view.** A quiet row above the prompt shows the 5-hour and weekly limits and the context as small bars, plus the skill Claude is using now, with an **Open Helm** button.
 - **Speaks your language.** 16 languages, following the computer's by default, changeable from the panel.
+- **Check before you trust.** [SkillSpector](https://github.com/NVIDIA/SkillSpector) by NVIDIA scans every skill and plugin you have, and every new tool before it can be installed, for prompt injection, data theft and risky code. A scan that says "do not install" hides the Install button. It is static-only: no model, no key, nothing leaves your computer. Helm keeps it up to date.
 - **Keep it healthy.** *Tidy up* finds plugins whose files are gone, broken skill folders, skills with no description and duplicate names. *Update all* updates every plugin in one press. Neither touches a project's own settings.
 - **Start a repository properly.** When a GitHub connector is available, one checkbox adds a professional GitHub baseline to your first prompt: pick a license and the items you want (README, CI, `SECURITY.md`, Dependabot, branch protection and more), add your own directions, and it is remembered.
 
@@ -58,7 +59,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.5.0.zip --repo rlpb/helm
+gh attestation verify helm-0.6.0.zip --repo rlpb/helm
 ```
 
 ## Support

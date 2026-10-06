@@ -46,3 +46,15 @@ export function undoPicks(text: string, before: Before): string | null {
   }
   return `${JSON.stringify(root, null, 2)}\n`
 }
+
+/** The settings text with one skill switched off (`skillOverrides`), or back to its default; null when the file is not a JSON object. */
+export function setSkillOff(text: string, name: string, off: boolean): string | null {
+  const root = parse(text)
+  if (!root) return null
+  const bucket = root.skillOverrides && typeof root.skillOverrides === 'object' ? root.skillOverrides : {}
+  if (off) bucket[name] = 'off'
+  else delete bucket[name]
+  if (Object.keys(bucket).length === 0) delete root.skillOverrides
+  else root.skillOverrides = bucket
+  return `${JSON.stringify(root, null, 2)}\n`
+}
