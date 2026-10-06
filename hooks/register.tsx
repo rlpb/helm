@@ -652,7 +652,7 @@ export const register: Register = on => {
       zoom: (cat: string | null) => void update($, nav, s => ({ ...s, zoom: cat })),
       fold: (cat: string) => void update($, nav, s => ({ ...s, open: (s.open ?? []).includes(cat) ? s.open.filter(x => x !== cat) : [...(s.open ?? []), cat] })),
       foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: (s.open ?? []).length > 0 ? [] : cats })),
-      inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: key })),
+      inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: s.inspect === key ? null : key })),
       lang: (pref: string) => void setLang($, pref),
       ask: (text: string) => void update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } })),
       refine: () => void refine($),

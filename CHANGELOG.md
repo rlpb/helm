@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-10-06
+
+### Changed
+
+- **Tools and skills: press a name to see what it is.** The hover card could not be made opaque (the engine does not paint a background behind an overlay) and the reserved gap under each list was empty space. Names are now buttons: press one and a card with its category, state, use count and description appears right under that list, as part of the page; press it again to hide it. Nothing is reserved when nothing is chosen.
+
 ## [0.9.2] - 2026-10-06
 
 ### Fixed
@@ -175,7 +181,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/rlpb/helm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/rlpb/helm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/rlpb/helm/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rlpb/helm/compare/v0.8.1...v0.9.0

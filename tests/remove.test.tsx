@@ -49,17 +49,17 @@ test('when every command fails the entry is taken out by hand, with a copy kept'
   expect(w.files.has(`${REGISTRY_FILE}.helm-backup`)).toBe(true)
 })
 
-test('a name in an opened category has an info block revealed in a fixed slot, never over the list', async ($, on) => {
+test('pressing a name in an opened category shows what it is right under the list, and pressing again hides it', async ($, on) => {
   world($, on)
   await boot($, PROJECT)
   const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
   await ui.press({ key: 'global' })
   await ui.press({ key: 'fold-all' })
-  const drawn = JSON.stringify(await ui.drawn())
-  const scopes = [...drawn.matchAll(/"scope":"([^"]+)"/g)].map(m => m[1])
-  // Each scope is named twice: by the name and by its info block.
-  const counts = scopes.reduce<Record<string, number>>((n, s) => ({ ...n, [s]: (n[s] ?? 0) + 1 }), {})
-  expect(Object.keys(counts).length).toBeGreaterThan(2)
-  expect(Object.values(counts).every(n => n === 2)).toBe(true)
-  expect(drawn).not.toContain('"position":"absolute"')
+  expect(await textOf(ui)).not.toContain('Write a report with citations')
+  await ui.press({ key: 'pickb-skill:report-writer' })
+  const shown = await textOf(ui)
+  expect(shown).toContain('Write a report with citations')
+  expect(JSON.stringify(await ui.drawn())).not.toContain('"position":"absolute"')
+  await ui.press({ key: 'pickb-skill:report-writer' })
+  expect(await textOf(ui)).not.toContain('Write a report with citations')
 })

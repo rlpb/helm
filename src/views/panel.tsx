@@ -419,30 +419,29 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             </Box>
             {isOpen && (
               <Box flexDirection="column" paddingLeft={3}>
-                <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
-                  {items.map((x, i) => (
-                    <Box key={`tip-${x.key}`} hover={{ scope: `${r.category}:${i}` }}>
-                      <Text color={x.on ? hex(r.category) : 'inactive'}>{`${x.on ? '●' : '○'} ${x.name}`}</Text>
+                <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
+                  {items.map(x => (
+                    <Box key={`pick-${x.key}`} columnGap={0}>
+                      <Text color={x.on ? hex(r.category) : 'inactive'}>{x.on ? '●' : '○'}</Text>
+                      <Button key={`pickb-${x.key}`} label={`${n.inspect === x.key ? '▸ ' : ' '}${x.name}`} plain onPress={() => act.inspect(x.key)} />
                     </Box>
                   ))}
                 </Box>
-                {/* What the name under the pointer is: a fixed place under the list, so nothing is covered and nothing moves. */}
-                <Box key={`slot-${r.category}`} flexDirection="column" height={5} marginTop={1} overflow="hidden">
-                  {items.map((x, i) => {
+                {/* What the chosen name is, right under the list: part of the page, so nothing is covered. */}
+                {items
+                  .filter(x => x.key === n.inspect)
+                  .map(x => {
                     const u = c.uses[x.key]
                     return (
-                      <Box key={`info-${x.key}`} display="none" hover={{ scope: `${r.category}:${i}`, display: 'flex' }} flexDirection="column">
+                      <Box key={`info-${x.key}`} flexDirection="column" marginTop={1} borderStyle="round" borderColor={hex(r.category)} paddingX={1}>
                         <Text bold color={hex(r.category)}>
                           {x.name}
                         </Text>
-                        <Text dimColor>{`${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`}</Text>
-                        {wrap(x.description || '—', Math.max(30, width - 12), 3).map((line, j) => (
-                          <Text key={`d-${j}`}>{line}</Text>
-                        ))}
+                        <Text dimColor>{`${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)} · ${T('map.last', ago(now - u.last))}` : ` · ${T('map.never')}`}`}</Text>
+                        <Text>{x.description || '—'}</Text>
                       </Box>
                     )
                   })}
-                </Box>
               </Box>
             )}
           </Box>
