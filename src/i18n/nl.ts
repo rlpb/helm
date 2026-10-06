@@ -112,4 +112,9 @@ export const nl: Dict = {
   'cat.docs': 'Documenten',
   'cat.setup': 'Configuratie',
   'cat.other': 'Overig',
+  'setup.empty': 'Beschrijf het in een paar woorden en Helm kiest uit je {0} geïnstalleerde tools.',
+  'g.updates': 'Updates',
+  'g.updatesText': 'Werk alle plugins met één druk bij.',
+  'map.category': 'Categorie',
+  'g.tools': 'Tools',
 }

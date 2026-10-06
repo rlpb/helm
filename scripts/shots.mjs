@@ -142,7 +142,23 @@ function block(node, cols) {
       return [[{ t: '› ', fg: COLORS.claude, bold: true }, { t: p.placeholder ?? '', fg: DIM }, { t: `   ${p.submitLabel ?? 'send'} ↵`, fg: DIM }]]
     case 'Select': {
       const option = (p.options ?? []).find(o => o.value === p.value)
-      return [[{ t: `${option?.label ?? p.value} ▾`, fg: COLORS.suggestion }]]
+      return [[...(p.label ? [{ t: p.label, fg: DIM }] : []), { t: `${option?.label ?? p.value} ▾`, fg: COLORS.suggestion }]]
+    }
+    case 'Raster': {
+      // The terminal's picture: a grid of colored characters, three numbers per cell.
+      const bytes = Uint8Array.from(Buffer.from(p.cells, 'base64'))
+      const words = new Uint32Array(bytes.buffer)
+      const lines = []
+      for (let y = 0; y < p.rows; y++) {
+        const line = []
+        for (let x = 0; x < p.columns; x++) {
+          const i = (y * p.columns + x) * 3
+          const rgb = words[i + 1]
+          line.push({ t: String.fromCodePoint(words[i] || 0x20), fg: rgb >= 0x01000000 ? DIM : `#${rgb.toString(16).padStart(6, '0')}` })
+        }
+        lines.push(line)
+      }
+      return lines
     }
     case 'Markdown':
       return markdown(p.text ?? '', cols)
@@ -196,14 +212,34 @@ function block(node, cols) {
             lines = [join(items, cols)]
           }
         } else {
-          const widths = blocks.map(b => Math.max(0, ...b.map(lineWidth)))
-          if (p.justifyContent === 'space-between' && blocks.length === 2) widths[0] = Math.max(widths[0], cols - widths[1] - gap)
-          lines = Array.from({ length: Math.max(...blocks.map(b => b.length)) }, (_, i) =>
-            blocks.flatMap((b, j) => {
-              const l = b[i] ?? []
-              return [...(j > 0 && gap ? [spaces(gap)] : []), ...l, spaces(widths[j] - lineWidth(l))]
-            }),
-          )
+          // Blocks side by side; with flexWrap they fill a row, then the next row starts below.
+          const sizeOf = b => Math.max(0, ...b.map(lineWidth))
+          const rows = []
+          let cur = []
+          let used = 0
+          for (const b of blocks) {
+            const w = sizeOf(b)
+            if (p.flexWrap === 'wrap' && cur.length && used + gap + w > cols) {
+              rows.push(cur)
+              cur = []
+              used = 0
+            }
+            used += (cur.length ? gap : 0) + w
+            cur.push(b)
+          }
+          rows.push(cur)
+          const rowGap = p.rowGap ?? 0
+          lines = rows.flatMap((group, r) => {
+            const widths = group.map(sizeOf)
+            if (p.justifyContent === 'space-between' && group.length === 2) widths[0] = Math.max(widths[0], cols - widths[1] - gap)
+            const merged = Array.from({ length: Math.max(...group.map(b => b.length)) }, (_, i) =>
+              group.flatMap((b, j) => {
+                const l = b[i] ?? []
+                return [...(j > 0 && gap ? [spaces(gap)] : []), ...l, spaces(widths[j] - lineWidth(l))]
+              }),
+            )
+            return [...(r > 0 && rowGap ? Array(rowGap).fill([]) : []), ...merged]
+          })
         }
       }
       const inner = cols
@@ -382,7 +418,7 @@ try {
   mkdirSync(docs, { recursive: true })
 
   for (const [name, { columns, tree }] of shots) {
-    const isBand = name === 'band'
+    const isBand = name === 'band' || name === 'rest'
     const lines = block(tree, columns)
     // The band sits above the prompt, so the picture shows a prompt under it.
     const footer = isBand

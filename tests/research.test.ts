@@ -31,7 +31,7 @@ describe('what was typed', () => {
 describe('the verdict', () => {
   test('a healthy repo is ok, a stale one asks, an archived one is refused', () => {
     expect(judge(meta(), NOW).level).toBe('ok')
-    expect(judge(meta({ pushedAt: '2024-01-01T00:00:00Z', license: null }), NOW)).toEqual({ level: 'caution', reasons: ['No clear license.', 'Not updated for 34 months.'] })
+    expect(judge(meta({ pushedAt: '2024-01-01T00:00:00Z', license: null }), NOW)).toEqual({ level: 'caution', reasons: [{ k: 'nolicense' }, { k: 'idle', n: 34 }] })
     expect(judge(meta({ archived: true }), NOW).level).toBe('no')
     expect(judge(meta({ marketplace: null }), NOW).level).toBe('no')
   })

@@ -112,4 +112,9 @@ export const zh: Dict = {
   'cat.docs': '文档',
   'cat.setup': '配置',
   'cat.other': '其他',
+  'setup.empty': '用几句话描述它，Helm 会从你已安装的 {0} 个工具中挑选。',
+  'g.updates': '更新',
+  'g.updatesText': '一键将所有插件更新到最新。',
+  'map.category': '分类',
+  'g.tools': '工具',
 }

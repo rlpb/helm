@@ -112,4 +112,9 @@ export const tr: Dict = {
   'cat.docs': 'Belgeler',
   'cat.setup': 'Yapılandırma',
   'cat.other': 'Diğer',
+  'setup.empty': 'Birkaç sözcükle anlat, Helm kurulu {0} aracın arasından seçsin.',
+  'g.updates': 'Güncellemeler',
+  'g.updatesText': 'Tüm eklentileri tek basışta güncelle.',
+  'map.category': 'Kategori',
+  'g.tools': 'Araçlar',
 }

@@ -112,4 +112,9 @@ export const ar: Dict = {
   'cat.docs': 'المستندات',
   'cat.setup': 'الإعداد',
   'cat.other': 'أخرى',
+  'setup.empty': 'صِفه بكلمات قليلة وسيختار Helm من أدواتك المثبّتة وعددها {0}.',
+  'g.updates': 'التحديثات',
+  'g.updatesText': 'حدّث كل الإضافات بضغطة واحدة.',
+  'map.category': 'الفئة',
+  'g.tools': 'الأدوات',
 }

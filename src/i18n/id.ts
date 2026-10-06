@@ -112,4 +112,9 @@ export const id: Dict = {
   'cat.docs': 'Dokumen',
   'cat.setup': 'Konfigurasi',
   'cat.other': 'Lainnya',
+  'setup.empty': 'Jelaskan dengan beberapa kata, lalu Helm memilih dari {0} alat Anda yang terpasang.',
+  'g.updates': 'Pembaruan',
+  'g.updatesText': 'Perbarui semua plugin dengan sekali tekan.',
+  'map.category': 'Kategori',
+  'g.tools': 'Alat',
 }

@@ -54,10 +54,11 @@ const banner = () => `<!doctype html><meta charset="utf-8"><style>${base}
 </div>`
 
 const CARDS = [
+  { file: 'rest', accent: '#6fd08c', kicker: 'Always in view', title: 'Your limits, one glance away', text: 'A quiet row above the prompt: the project, the 5-hour and weekly limits, the context, and the skill Claude is using now.' },
   { file: 'project', accent: '#5aa9ff', kicker: 'Set up', title: 'Tell it what you are building', text: 'Helm shortlists the fitting tools you already have, and one press turns them on for that folder only. Undo restores it exactly.' },
-  { file: 'research', accent: '#f2b84b', kicker: 'Vet', title: 'Check a tool before it comes in', text: 'Paste a link or a name. Helm reads the repository, gives a plain verdict, and installs only after your yes.' },
-  { file: 'global', accent: '#6fd08c', kicker: 'Keep healthy', title: 'Tidy up and update in a press', text: 'Find plugins whose files are gone, broken skills and duplicates. Update every plugin at once, without touching a project.' },
-  { file: 'band', accent: '#b28cff', kicker: 'Start', title: 'A quiet notice, never in the way', text: 'In a folder it has not seen, Helm asks once: Open or Not here. It remembers the answer for that folder.' },
+  { file: 'research', accent: '#f2b84b', kicker: 'Discover', title: 'Check a tool before it comes in', text: 'Paste a link or a name. Helm reads the repository, gives a plain verdict, and installs only after your yes.' },
+  { file: 'global', accent: '#b28cff', kicker: 'Keep healthy', title: 'A dashboard for everything you have', text: 'Health, updates, what you use most, and every tool by category. Tidy up and update in a press, without touching a project.' },
+  { file: 'map', accent: '#4fd1d9', kicker: 'See', title: 'A live map of your tools', text: 'Skills light up as Claude uses them. Pick any one to see what it does, how often and when.' },
 ]
 
 const card = c => `<!doctype html><meta charset="utf-8"><style>${base}
@@ -66,8 +67,8 @@ const card = c => `<!doctype html><meta charset="utf-8"><style>${base}
   .kicker{font-size:17px;letter-spacing:3px;text-transform:uppercase;color:${c.accent};font-weight:600}
   h2{margin-top:16px;font-size:46px;line-height:1.1;letter-spacing:-1.2px;font-weight:700}
   p{margin-top:20px;font-size:21px;line-height:1.5;color:${DIM}}
-  .win{flex:1;display:flex;justify-content:center}
-  .win img{width:100%;border-radius:18px;box-shadow:0 40px 90px -20px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.08),0 0 80px -10px ${c.accent}55}
+  .win{flex:1;max-height:540px;overflow:hidden;border-radius:18px;box-shadow:0 40px 90px -20px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.08),0 0 80px -10px ${c.accent}55;-webkit-mask-image:linear-gradient(#000 88%,transparent);mask-image:linear-gradient(#000 88%,transparent)}
+  .win img{display:block;width:100%}
 </style>
 <div class="copy"><div class="kicker">${c.kicker}</div><h2>${c.title}</h2><p>${c.text}</p></div>
 <div class="win"><img src="${data(`screenshot-${c.file}.png`)}"></div>`

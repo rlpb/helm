@@ -28,7 +28,8 @@ export type ProjectState = 'new' | 'ready' | 'declined'
 /** What the person said they are building, and the entries that fit it. */
 export type Ask = { text: string; picks: string[] }
 
-export type Issue = { kind: string; key: string; text: string; fix?: string[] }
+/** One thing the health check found. `a` and `b` are the names the sentence is about. */
+export type Issue = { kind: 'stale-plugin' | 'broken-skill' | 'no-description' | 'duplicate'; key: string; a: string; b?: string; fix?: string[] }
 
 /** What the repository page and its top-level files say about a tool. */
 export type Meta = {
@@ -44,7 +45,10 @@ export type Meta = {
   isSkill: boolean
 }
 
-export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: string[] }
+/** Why a tool got its verdict: a code the panel turns into a sentence, and a number when one is needed. */
+export type Reason = { k: 'archived' | 'noform' | 'nolicense' | 'idle' | 'stars'; n?: number }
+
+export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: Reason[] }
 
 /** A tool the person asked about: what it is and what Helm thinks. */
 export type Found = { meta: Meta; verdict: Verdict }
@@ -53,7 +57,18 @@ export type Hit = { repo: string; description: string; stars: number }
 /** The GitHub baseline the person chose, kept across sessions. */
 export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
 
+export type Lang = 'en' | 'it' | 'es' | 'fr' | 'de' | 'pt' | 'nl' | 'ru' | 'zh' | 'ja' | 'ko' | 'hi' | 'ar' | 'tr' | 'pl' | 'id'
+
+/** How full each limit is, in percent; null where the session does not say. */
+export type Usage = { five: number | null; week: number | null; ctx: number | null }
+
 export type Core = {
+  /** The language shown, and the person's choice (`auto` follows the computer). */
+  lang: Lang
+  pref: Lang | 'auto'
+  usage: Usage | null
+  /** How often and when Claude used each tool, kept across sessions. */
+  uses: Record<string, { n: number; last: number }>
   /** The key of an off tool that fits the prompt just typed, offered above the prompt. */
   hint: string | null
   setup: Setup
@@ -79,7 +94,7 @@ export type Core = {
   ask: Ask | null
 }
 
-export type Nav = { tab: Tab }
+export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null }
 
 declare module 'claude-code' {
   interface PluginState {

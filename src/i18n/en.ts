@@ -114,6 +114,11 @@ export const en = {
   'cat.docs': 'Documents',
   'cat.setup': 'Setup',
   'cat.other': 'Other',
+  'setup.empty': 'Describe it in a few words and Helm picks from your {0} installed tools.',
+  'g.updates': 'Updates',
+  'g.updatesText': 'Bring every plugin up to date in one press.',
+  'map.category': 'Category',
+  'g.tools': 'Tools',
 }
 
 export type Dict = typeof en

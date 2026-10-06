@@ -18,7 +18,9 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 
 - **Set up a project.** Open a new folder and Helm asks what you are building. It shortlists the fitting tools from what you already have installed, and one press turns them on for that folder only. Undo puts the folder back exactly as it was.
 - **Vet a tool.** Paste a GitHub link, `owner/name` or just a name. Helm reads the repository (license, archived or not, last update, stars, and whether it holds a plugin or a skill), gives a plain verdict, and installs only after you say yes. A tool you added for one project is offered later for all of them.
-- **See what is in use.** The **Map** tab draws everything installed as a live graph. When Claude uses a skill, its dot lights up and fades. It costs no tokens.
+- **See what is in use.** The **Map** tab draws everything installed as a live graph. When Claude uses a skill, its dot lights up and gets a name; pick any skill to see what it does, how often and when it ran. It costs no tokens.
+- **Keep your limits in view.** A quiet row above the prompt shows the 5-hour and weekly limits and the context as small bars, plus the skill Claude is using now, with an **Open Helm** button.
+- **Speaks your language.** 16 languages, following the computer's by default, changeable from the panel.
 - **Keep it healthy.** *Tidy up* finds plugins whose files are gone, broken skill folders, skills with no description and duplicate names. *Update all* updates every plugin in one press. Neither touches a project's own settings.
 - **Start a repository properly.** When a GitHub connector is available, one checkbox adds a professional GitHub baseline to your first prompt: pick a license and the items you want (README, CI, `SECURITY.md`, Dependabot, branch protection and more), add your own directions, and it is remembered.
 
@@ -56,7 +58,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.4.0.zip --repo rlpb/helm
+gh attestation verify helm-0.5.0.zip --repo rlpb/helm
 ```
 
 ## Support

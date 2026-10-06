@@ -23,6 +23,9 @@ jobs:
   guards:
     uses: ./.github/workflows/guards.yml
     with:
+      # The panel is translated: one dictionary per language lives in src/i18n.
+      language-excludes: "--exclude-dir=i18n"
+    with:
       ref: ${{ github.event.inputs.tag || github.ref_name }}
 
   package:

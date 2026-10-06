@@ -3,25 +3,60 @@ import type { Register } from 'claude-code'
 
 import type { Core, Found, Hit, Meta, Nav, ProjectState, Setup } from '../types'
 import { installPlan, judge, parseTarget } from '../src/research'
-import { tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
 import { shortlist } from '../src/shortlist'
-import { estimateTokens, hintFor, parseChoice, refinePrompt } from '../src/suggest'
+import { hintFor, parseChoice, refinePrompt } from '../src/suggest'
 import { isProject, localSettings, projectKey, projectName } from '../src/project'
 import { applyPicks, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
-import { ITEMS, DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
+import { DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
 import { GLOW_MS, cells, glow, layout, svg } from '../src/graph'
+import { detectLang, isLang, t } from '../src/i18n'
+import type { Key, Lang } from '../src/i18n'
+import { Band } from '../src/views/band'
 import { Panel } from '../src/views/panel'
 
 const PANE = 'helm'
 let isTerminal = false
 let fading = false
-const core = atom({ plugin: 'helm', key: 'core' } as const, { hint: null, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
-const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
+
+const core = atom(
+  { plugin: 'helm', key: 'core' } as const,
+  {
+    lang: 'en',
+    pref: 'auto',
+    usage: null,
+    uses: {},
+    hint: null,
+    setup: DEFAULT_SETUP,
+    used: {},
+    tick: 0,
+    found: null,
+    hits: null,
+    candidates: [],
+    dir: '',
+    message: null,
+    report: null,
+    confirm: null,
+    index: null,
+    project: null,
+    state: null,
+    ask: null,
+  } as Core,
+)
+const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
+const undoKey = (key: string) => `undo:${key}`
+const tempKey = (key: string) => `temp:${key}`
+const ignoreKey = (key: string) => `ignored:${key}`
+
+/** A line in the panel's footer, in the language shown. */
+async function say($: any, key: Key, ...vars: (string | number)[]) {
+  const c = await read($, core)
+  await update($, core, s => ({ ...s, message: t(c.lang, key, ...vars) }))
+}
 
 async function setState($: any, state: ProjectState) {
   const c = await read($, core)
@@ -30,17 +65,51 @@ async function setState($: any, state: ProjectState) {
   await update($, core, s => ({ ...s, state }))
 }
 
-const say = ($: any, message: string | null) => update($, core, s => ({ ...s, message }))
-
 const disk = ($: any) => ({
   read: async (p: string) => (await $.fs.read(p)) as string,
   list: (p: string) => $.fs.list(p),
   exists: (p: string) => $.fs.exists(p),
 })
 
-const undoKey = (key: string) => `undo:${key}`
-const tempKey = (key: string) => `temp:${key}`
-const ignoreKey = (key: string) => `ignored:${key}`
+// ---- language and limits ----
+
+/** The computer's language: the usual variables first, then what the runtime reports. */
+async function systemLang($: any): Promise<Lang> {
+  const env: Record<string, string | undefined> = {
+    LC_ALL: ((await $.env.get('LC_ALL')) as string | undefined) ?? undefined,
+    LC_MESSAGES: ((await $.env.get('LC_MESSAGES')) as string | undefined) ?? undefined,
+    LANGUAGE: ((await $.env.get('LANGUAGE')) as string | undefined) ?? undefined,
+    LANG: ((await $.env.get('LANG')) as string | undefined) ?? undefined,
+  }
+  let runtime: string | undefined
+  try {
+    runtime = Intl.DateTimeFormat().resolvedOptions().locale
+  } catch {
+    // No Intl: the variables are all there is.
+  }
+  return detectLang(env, runtime)
+}
+
+async function setLang($: any, pref: string) {
+  if (pref !== 'auto' && !isLang(pref)) return
+  await $.store.set('lang-pref', pref)
+  const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
+  await update($, core, s => ({ ...s, pref: pref as Core['pref'], lang, message: null }))
+}
+
+/** How full the 5-hour limit, the weekly limit and the context are. */
+async function refreshUsage($: any) {
+  const u = await $.session.usage().catch(() => null)
+  if (!u) return
+  const limit = (kind: RegExp): number | null => {
+    const found = (u.rateLimits ?? []).find((x: any) => kind.test(String(x.kind)))
+    return found && Number.isFinite(Number(found.percentUsed)) ? Math.round(Number(found.percentUsed)) : null
+  }
+  const ctx = u.context?.percent ?? u.context?.breakdown?.percentage
+  await update($, core, s => ({ ...s, usage: { five: limit(/five|5/i), week: limit(/seven|week|7/i), ctx: ctx == null ? null : Math.round(Number(ctx)) } }))
+}
+
+// ---- turning tools on for a project ----
 
 /** The way back for every key turned on here: the first value seen wins, so Undo goes to the original. */
 async function keepBefore($: any, key: string, before: Before) {
@@ -56,15 +125,15 @@ async function accept($: any, key: string, scope: 'project' | 'session') {
   const file = localSettings(c.project.root)
   const text = (await $.fs.exists(file)) ? ((await $.fs.read(file)) as string) : ''
   const done = applyPicks(text, [entry])
-  if (!done) return say($, 'The settings file of this folder is not valid JSON, so Helm left it alone.')
+  if (!done) return say($, 'msg.badjson')
   await $.fs.write(file, done.text)
   await keepBefore($, c.project.key, done.before)
   if (scope === 'session') {
     const temp = ((await $.store.get(tempKey(c.project.key))) as string[] | undefined) ?? []
     await $.store.set(tempKey(c.project.key), [...new Set([...temp, key])])
   }
-  const where = scope === 'session' ? 'for this session' : 'for this project'
-  await update($, core, s => ({ ...s, hint: null, message: `${entry.name} is on ${where}. A skill applies at once; a plugin from the next chat.` }))
+  const where = t(c.lang, scope === 'session' ? 'msg.scopeSession' : 'msg.scopeProject')
+  await update($, core, s => ({ ...s, hint: null, message: t(c.lang, 'msg.on', entry.name, where) }))
 }
 
 /** "No": the tool is not suggested again in this folder. */
@@ -76,19 +145,19 @@ async function dismiss($: any, key: string) {
   await update($, core, s => ({ ...s, hint: null }))
 }
 
-/** One small-model call over the shortlist's candidates; the price is shown before, the real use after. */
+/** One small-model call over the shortlist's candidates; the size is shown before, the real use after. */
 async function refine($: any) {
   const c = await read($, core)
   if (!c.ask) return
   const index = c.index ?? []
   const candidates = shortlist(index, c.ask.text, 12).map(k => index.find(x => x.key === k)!).filter(Boolean)
   if (candidates.length < 2) return
-  await say($, 'Asking a small model…')
+  await say($, 'msg.refining')
   const r = await $.model.complete({ model: 'haiku', prompt: refinePrompt(candidates, c.ask.text), maxTokens: 100 }).catch(() => ({ isAnswered: false }))
-  if (!r.isAnswered) return say($, 'The small model did not answer; the word match stays.')
+  if (!r.isAnswered) return say($, 'msg.nomodel')
   const picks = parseChoice(r.text, candidates)
   const used = (r.usage?.input_tokens ?? 0) + (r.usage?.output_tokens ?? 0)
-  await update($, core, s => ({ ...s, ask: s.ask ? { ...s.ask, picks } : s.ask, message: `Refined: ${picks.length} of ${candidates.length} kept (${used} tokens).` }))
+  await update($, core, s => ({ ...s, ask: s.ask ? { ...s.ask, picks } : s.ask, message: t(c.lang, 'msg.refined', picks.length, candidates.length, used) }))
 }
 
 /** Turns the shortlist on for this folder only, in its own settings.local.json, and keeps the way back. */
@@ -99,10 +168,10 @@ async function turnOnHere($: any) {
   const file = localSettings(c.project.root)
   const text = (await $.fs.exists(file)) ? ((await $.fs.read(file)) as string) : ''
   const done = applyPicks(text, picks)
-  if (!done) return say($, 'This folder\'s settings file is not valid JSON, so Helm left it alone.')
+  if (!done) return say($, 'msg.badjson')
   await $.fs.write(file, done.text)
   await keepBefore($, c.project.key, done.before)
-  await say($, `Turned on ${Object.keys(done.before).length} for ${c.project.name}. It applies from the next chat here.`)
+  await say($, 'msg.turnedOn', Object.keys(done.before).length, c.project.name)
 }
 
 async function undoHere($: any) {
@@ -110,32 +179,47 @@ async function undoHere($: any) {
   if (!c.project) return
   const before = (await $.store.get(undoKey(c.project.key))) as Before | undefined
   const file = localSettings(c.project.root)
-  if (!before || !(await $.fs.exists(file))) return say($, 'Nothing to undo here.')
+  if (!before || !(await $.fs.exists(file))) return say($, 'msg.nothingUndo')
   const text = undoPicks((await $.fs.read(file)) as string, before)
-  if (text === null) return say($, 'This folder\'s settings file is not valid JSON, so Helm left it alone.')
+  if (text === null) return say($, 'msg.badjson')
   await $.fs.write(file, text)
   await $.store.delete(undoKey(c.project.key))
-  await say($, 'Put this folder back as it was.')
+  await say($, 'msg.undone')
 }
+
+// ---- the health of the global setup ----
 
 async function runCheckup($: any) {
   const c = await read($, core)
-  await say($, 'Checking…')
+  await say($, 'msg.checking')
   const report = await checkup(disk($), c.dir).catch(() => [])
-  await update($, core, s => ({ ...s, report, confirm: null, message: report.length ? `${report.length} to look at.` : 'Healthy: nothing to fix.' }))
+  await update($, core, s => ({ ...s, report, confirm: null, message: report.length ? t(c.lang, 'g.todo', report.length) : t(c.lang, 'msg.healthy') }))
 }
 
 async function runUpdate($: any) {
   const c = await read($, core)
   const ids = (c.index ?? []).filter(x => x.kind === 'plugin').map(x => x.key.slice(7))
-  await say($, `Updating ${ids.length} plugins…`)
+  await say($, 'msg.updating', ids.length)
   let ok = 0
   for (const argv of updateAll(ids)) {
     const r = await $.process.run(argv, { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
     if (r.exitCode === 0) ok += 1
   }
-  await say($, `Updated ${ok} of ${ids.length}. New versions load in the next chat.`)
+  await say($, 'msg.updated', ok, ids.length)
 }
+
+/** The only fix Helm runs: it needs the second press on the same issue. */
+async function fixIssue($: any, key: string) {
+  const c = await read($, core)
+  const issue = c.report?.find(i => i.key === key)
+  if (!issue?.fix) return
+  if (c.confirm !== key) return void (await update($, core, s => ({ ...s, confirm: key })))
+  const r = await $.process.run(issue.fix, { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1 }))
+  if (r.exitCode !== 0) return say($, 'msg.cannotFix', key)
+  await runCheckup($)
+}
+
+// ---- finding and installing new tools ----
 
 const gh = ($: any, args: string[]) => $.process.run(['gh', ...args], { timeoutMs: 30_000 }).catch(() => ({ exitCode: -1, stdout: '', stderr: '' }))
 const RAW = ['-H', 'Accept: application/vnd.github.raw']
@@ -174,11 +258,12 @@ async function inspect($: any, repo: string): Promise<Found | null> {
 }
 
 async function research($: any, input: string) {
+  const c = await read($, core)
   const target = parseTarget(input)
-  await update($, core, s => ({ ...s, found: null, hits: null, message: target.kind === 'none' ? 'Type a GitHub link, owner/name, or a name.' : 'Looking…' }))
+  await update($, core, s => ({ ...s, found: null, hits: null, message: t(c.lang, target.kind === 'none' ? 'msg.type' : 'msg.looking') }))
   if (target.kind === 'repo') {
     const found = await inspect($, target.repo)
-    return void (await update($, core, s => ({ ...s, found, message: found ? null : 'Could not read that repository (is it public, and is gh signed in?).' })))
+    return void (await update($, core, s => ({ ...s, found, message: found ? null : t(c.lang, 'msg.noRead') })))
   }
   if (target.kind === 'search') {
     const r = await gh($, ['search', 'repos', target.query, '--limit', '5', '--json', 'fullName,description,stargazersCount'])
@@ -188,7 +273,7 @@ async function research($: any, input: string) {
     } catch {
       // No usable answer: no hits.
     }
-    await update($, core, s => ({ ...s, hits, message: hits.length ? null : 'Nothing found.' }))
+    await update($, core, s => ({ ...s, hits, message: hits.length ? null : t(c.lang, 'msg.nothing') }))
   }
 }
 
@@ -197,16 +282,29 @@ async function install($: any, scope: 'user' | 'local') {
   const c = await read($, core)
   if (!c.found || c.found.verdict.level === 'no') return
   const plan = installPlan(c.found.meta, scope, `${c.dir}/skills`)
-  if (!plan) return say($, 'Helm does not know how to install that form.')
-  await say($, 'Installing…')
+  if (!plan) return say($, 'msg.unknownForm')
+  await say($, 'msg.installing')
   for (const argv of plan) {
     const r = await $.process.run(argv, { timeoutMs: 180_000, ...(scope === 'local' && c.project ? { cwd: c.project.root } : {}) }).catch(() => ({ exitCode: -1 }))
-    if (r.exitCode !== 0) return say($, `Stopped at: ${argv.slice(0, 4).join(' ')}`)
+    if (r.exitCode !== 0) return say($, 'msg.stopped', argv.slice(0, 4).join(' '))
   }
   const repo = c.found.meta.repo
   const candidates = scope === 'local' ? [...new Set([...c.candidates, repo])] : c.candidates.filter(x => x !== repo)
   await $.store.set('candidates', candidates)
-  await update($, core, s => ({ ...s, candidates, found: null, message: `Installed ${repo}${scope === 'local' ? ' for this project' : ''}. It loads in the next chat.` }))
+  await update($, core, s => ({ ...s, candidates, found: null, message: t(c.lang, scope === 'local' ? 'msg.installedHere' : 'msg.installed', repo) }))
+}
+
+async function pickHit($: any, repo: string) {
+  const c = await read($, core)
+  const found = await inspect($, repo)
+  await update($, core, s => ({ ...s, hits: null, found, message: found ? null : t(c.lang, 'msg.noRead') }))
+}
+
+async function globalInstall($: any, repo: string) {
+  const found = await inspect($, repo)
+  if (!found) return say($, 'msg.noRead')
+  await update($, core, s => ({ ...s, found }))
+  await install($, 'user')
 }
 
 /** Changes the GitHub baseline and keeps it for every project. */
@@ -218,29 +316,6 @@ async function setSetup($: any, change: (s: Setup) => Setup) {
 }
 
 const toggleItem = (id: string) => (s: Setup): Setup => ({ ...s, items: s.items.includes(id) ? s.items.filter(x => x !== id) : [...s.items, id] })
-
-async function pickHit($: any, repo: string) {
-  const found = await inspect($, repo)
-  await update($, core, s => ({ ...s, hits: null, found, message: found ? null : 'Could not read that repository.' }))
-}
-
-async function globalInstall($: any, repo: string) {
-  const found = await inspect($, repo)
-  if (!found) return say($, 'Could not read that repository.')
-  await update($, core, s => ({ ...s, found }))
-  await install($, 'user')
-}
-
-/** The only fix Helm runs: it needs the second press on the same issue. */
-async function fixIssue($: any, key: string) {
-  const c = await read($, core)
-  const issue = c.report?.find(i => i.key === key)
-  if (!issue?.fix) return
-  if (c.confirm !== key) return void (await update($, core, s => ({ ...s, confirm: key })))
-  const r = await $.process.run(issue.fix, { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1 }))
-  if (r.exitCode !== 0) return say($, `Could not fix ${key}.`)
-  await runCheckup($)
-}
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -273,11 +348,16 @@ export const register: Register = on => {
 
     const setup = { ...DEFAULT_SETUP, ...(((await $.store.get('github-setup')) as object | undefined) ?? {}) }
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
-    await update($, core, () => ({ hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    const uses = ((await $.store.get('uses')) as Core['uses'] | undefined) ?? {}
+    const saidPref = await $.store.get('lang-pref')
+    const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
+    const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
+    await update($, core, () => ({ lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    await refreshUsage($)
     return started
   })
 
-  // A Skill call lights its dot. A terminal has no animation of its own, so it redraws while the glow fades.
+  // A Skill call lights its dot and is counted. A terminal has no animation of its own, so it redraws while the glow fades.
   on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
     const name = String((e as any).skill ?? '')
     const c = await read($, core)
@@ -285,7 +365,9 @@ export const register: Register = on => {
     const entry = list.find(x => x.key === `skill:${name}`) ?? list.find(x => x.kind === 'plugin' && x.key.startsWith(`plugin:${name.split(':')[0]}@`))
     if (entry) {
       const at = await $.clock.now()
-      await update($, core, s => ({ ...s, used: { ...s.used, [entry.key]: at } }))
+      const uses = { ...c.uses, [entry.key]: { n: (c.uses[entry.key]?.n ?? 0) + 1, last: at } }
+      await $.store.set('uses', uses)
+      await update($, core, s => ({ ...s, uses, used: { ...s.used, [entry.key]: at } }))
       if (isTerminal && !fading) {
         fading = true
         void (async () => {
@@ -300,7 +382,12 @@ export const register: Register = on => {
     return next(e)
   })
 
-  // The GitHub brief rides on the first prompt of a project, once.
+  on('turn.complete', async ($, e, next) => {
+    await refreshUsage($)
+    return next(e)
+  })
+
+  // A tool that fits what was just typed is offered, and the GitHub brief rides on the first prompt of a project, once.
   on('prompt.submit', async ($, e, next) => {
     const c = await read($, core)
     if (c.project && c.state !== 'declined') {
@@ -323,58 +410,25 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const c = await read($, core)
     if (e.props.hasSurvey) return next(e)
-    const { Box, Button, Text } = $.ui.resolve(e)
-    const hinted = c.hint ? (c.index ?? []).find(x => x.key === c.hint) : undefined
-    if (hinted && c.project && c.state !== 'new') {
-      return (
-        <Box>
-          <Text dimColor>{`${hinted.name} is off and fits this. Turn it on `}</Text>
-          <Button key="hint-session" label="This session" onPress={() => accept($, hinted.key, 'session')} />
-          <Text> </Text>
-          <Button key="hint-project" label="This project" onPress={() => accept($, hinted.key, 'project')} />
-          <Text> </Text>
-          <Button key="hint-no" label="No" onPress={() => dismiss($, hinted.key)} />
-        </Box>
-      )
+    const ui = $.ui.resolve(e as any) as any
+    const c = await read($, core)
+    const now = await $.clock.now()
+    const lit = Object.entries(c.used)
+      .sort((x, y) => y[1] - x[1])
+      .find(([key, at]) => glow({ [key]: at }, key, now) > 0)
+    const litEntry = lit ? (c.index ?? []).find(x => x.key === lit[0]) : undefined
+    const act = {
+      open: () => void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true }),
+      accept: (key: string, scope: 'project' | 'session') => void accept($, key, scope),
+      dismiss: (key: string) => void dismiss($, key),
+      start: () => {
+        void setState($, 'ready')
+        void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
+      },
+      skip: () => void setState($, 'declined'),
     }
-    if (!c.project || c.state !== 'new') {
-      // The resting row: always there, so the panel is one press away without typing a command.
-      const now = await $.clock.now()
-      const lit = Object.entries(c.used)
-        .sort((x, y) => y[1] - x[1])
-        .find(([key, at]) => glow({ [key]: at }, key, now) > 0)
-      const litName = lit ? (c.index ?? []).find(x => x.key === lit[0])?.name : undefined
-      const active = (c.index ?? []).filter(x => x.on).length
-      return (
-        <Box justifyContent="space-between">
-          <Box>
-            <Text bold color="claude">
-              Helm
-            </Text>
-            <Text dimColor>{`  ·  ${c.project ? c.project.name : 'no project here'}  ·  ${active} on`}</Text>
-            {litName && <Text color="success">{`  ●  ${litName}`}</Text>}
-          </Box>
-          <Button key="helm-open" label="Open Helm" onPress={() => $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })} />
-        </Box>
-      )
-    }
-    return (
-      <Box>
-        <Text dimColor>New project: {c.project.name}. Set it up with Helm? </Text>
-        <Button
-          key="open"
-          label="Open"
-          onPress={async () => {
-            await setState($, 'ready')
-            await $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
-          }}
-        />
-        <Text> </Text>
-        <Button key="skip" label="Not here" onPress={() => setState($, 'declined')} />
-      </Box>
-    )
+    return Band({ ui, c, lang: c.lang, act, terminal: e.surface === 'terminal', width: e.props.bodyColumns ?? 100, litName: litEntry?.name, litCat: litEntry?.category })
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -384,19 +438,23 @@ export const register: Register = on => {
     const github = hasGithub(await $.tool.list().catch(() => []))
     const terminal = e.surface === 'terminal'
     const width = Math.max(40, Math.min(e.props.bodyColumns ?? 80, 100))
+    const now = await $.clock.now()
     let map: any = null
     if (n.tab === 'graph') {
-      const now = await $.clock.now()
       const lay = layout(c.index ?? [])
+      const opts = { label: (cat: string) => t(c.lang, `cat.${cat}` as Key), uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])) }
       isTerminal = terminal
       map = terminal ? (
-        <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16)} />
+        <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
       ) : (
-        <ui.Svg source={svg(lay, c.used, now)} alt="Map of installed tools, lit when used" />
+        <ui.Svg source={svg(lay, c.used, now, opts)} alt="Map of installed tools, lit when used" isInteractive />
       )
     }
     const act = {
-      tab: (tab: Nav['tab']) => void update($, nav, () => ({ tab })),
+      tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
+      sub: (sub: Nav['sub']) => void update($, nav, s => ({ ...s, sub })),
+      inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: key })),
+      lang: (pref: string) => void setLang($, pref),
       ask: (text: string) => void update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } })),
       refine: () => void refine($),
       turnOn: () => void turnOnHere($),
@@ -413,6 +471,6 @@ export const register: Register = on => {
       fix: (key: string) => void fixIssue($, key),
       makeGlobal: (repo: string) => void globalInstall($, repo),
     }
-    return Panel({ ui, c, n, github, act, terminal, width, map })
+    return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
   })
 }

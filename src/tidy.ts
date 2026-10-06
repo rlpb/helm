@@ -1,17 +1,10 @@
 // The health check of the global setup. It only reads and reports; the one fix it offers is removing
 // a plugin whose files are gone, and only after a second press. It never touches a project's files.
 
+import type { Issue } from '../types'
 import type { Disk } from './load'
 
-export type Issue = {
-  kind: 'stale-plugin' | 'broken-skill' | 'no-description' | 'duplicate'
-  /** Entry key, `plugin:<id>` or `skill:<name>`. */
-  key: string
-  /** One plain sentence. */
-  text: string
-  /** The command that fixes it, when there is a safe one. */
-  fix?: string[]
-}
+export type { Issue }
 
 const SAFE = /^[A-Za-z0-9._:-]+$/
 
@@ -27,7 +20,7 @@ export async function checkup(disk: Disk, configDir: string): Promise<Issue[]> {
     const where = rows?.[0]?.installPath
     if (!where || !SAFE.test(id.replace('@', ':'))) continue
     if (!(await disk.exists(`${String(where).replace(/\\/g, '/')}/.claude-plugin/plugin.json`))) {
-      issues.push({ kind: 'stale-plugin', key: `plugin:${id}`, text: `${id} is registered but its files are gone.`, fix: ['claude', 'plugin', 'uninstall', id] })
+      issues.push({ kind: 'stale-plugin', key: `plugin:${id}`, a: id, fix: ['claude', 'plugin', 'uninstall', id] })
     }
   }
   const seen = new Map<string, string>()
@@ -41,15 +34,15 @@ export async function checkup(disk: Disk, configDir: string): Promise<Issue[]> {
     if (!(d.kind === 'dir' || d.isLink) || !SAFE.test(d.name)) continue
     const file = `${configDir}/skills/${d.name}/SKILL.md`
     if (!(await disk.exists(file))) {
-      issues.push({ kind: 'broken-skill', key: `skill:${d.name}`, text: `${d.name} is a skill folder with no SKILL.md.` })
+      issues.push({ kind: 'broken-skill', key: `skill:${d.name}`, a: d.name })
       continue
     }
     const raw = await disk.read(file).catch(() => '')
     if (!/^description:\s*\S/m.test(raw.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '')) {
-      issues.push({ kind: 'no-description', key: `skill:${d.name}`, text: `${d.name} has no description, so Claude cannot choose it.` })
+      issues.push({ kind: 'no-description', key: `skill:${d.name}`, a: d.name })
     }
     const same = seen.get(d.name.toLowerCase())
-    if (same) issues.push({ kind: 'duplicate', key: `skill:${d.name}`, text: `${d.name} and ${same} are the same name.` })
+    if (same) issues.push({ kind: 'duplicate', key: `skill:${d.name}`, a: d.name, b: same })
     seen.set(d.name.toLowerCase(), d.name)
   }
   return issues

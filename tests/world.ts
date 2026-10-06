@@ -11,6 +11,8 @@ type Options = {
   settings?: object
   /** What the small model answers; absent, it does not answer. */
   model?: string
+  /** The computer's language, as LANG says it. */
+  lang?: string
   tools?: { name: string; mcp: boolean }[]
   store?: Record<string, unknown>
   run?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }
@@ -42,10 +44,13 @@ export function world($: any, on: any, options: Options = {}) {
     return { value: undefined }
   })
   on('model.complete', () => ({ value: options.model ? { isAnswered: true, text: options.model, usage: { input_tokens: 30, output_tokens: 5 } } : { isAnswered: false, reason: 'none' } }))
+  on('session.usage', () => ({
+    value: { startedAt: 0, context: { percent: 31 }, rateLimits: [{ kind: 'five_hour', percentUsed: 24 }, { kind: 'seven_day', percentUsed: 41 }], cost: { usd: 0.4 } },
+  }))
   on('ui.open', () => ({ value: undefined }))
   on('prompt.submit', (_$: any, e: any) => ({ text: e.text }))
   mock.clock(on, { now: Date.UTC(2026, 9, 6, 12, 0, 0) })
-  mock.env(on, { USERPROFILE: HOME })
+  mock.env(on, { USERPROFILE: HOME, LANG: options.lang ?? 'en_US.UTF-8' })
 
   on('fs.read', (_$: any, e: any) => {
     const path = key(e.path)

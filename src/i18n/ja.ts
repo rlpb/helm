@@ -112,4 +112,9 @@ export const ja: Dict = {
   'cat.docs': 'ドキュメント',
   'cat.setup': '設定',
   'cat.other': 'その他',
+  'setup.empty': '数語で説明すると、Helm がインストール済みの {0} 個のツールから選びます。',
+  'g.updates': 'アップデート',
+  'g.updatesText': 'ワンタップですべてのプラグインを最新にします。',
+  'map.category': 'カテゴリ',
+  'g.tools': 'ツール',
 }

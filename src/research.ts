@@ -1,5 +1,5 @@
 // The research box: from what the person typed to a verdict and, after a yes, an install.
-import type { Meta, Verdict } from '../types'
+import type { Meta, Reason, Verdict } from '../types'
 
 // Everything here is pure; the calls to `gh` live in hooks/register.tsx.
 
@@ -21,17 +21,16 @@ export type { Meta, Verdict }
 
 /** A plain verdict. `no` blocks the install button; `caution` shows why and still asks. */
 export function judge(m: Meta, now: number): Verdict {
-  const no: string[] = []
-  const caution: string[] = []
-  if (m.archived) no.push('The repository is archived: nobody maintains it.')
-  if (!m.marketplace && !m.isSkill) no.push('No plugin catalog or SKILL.md at the top of the repository: Helm cannot install it.')
-  if (!m.license || m.license === 'NOASSERTION') caution.push('No clear license.')
+  const no: Reason[] = []
+  const caution: Reason[] = []
+  if (m.archived) no.push({ k: 'archived' })
+  if (!m.marketplace && !m.isSkill) no.push({ k: 'noform' })
+  if (!m.license || m.license === 'NOASSERTION') caution.push({ k: 'nolicense' })
   const idle = (now - Date.parse(m.pushedAt)) / 86_400_000
-  if (Number.isFinite(idle) && idle > 365) caution.push(`Not updated for ${Math.round(idle / 30)} months.`)
-  if (m.stars < 20) caution.push(`Only ${m.stars} stars: few people have used it.`)
+  if (Number.isFinite(idle) && idle > 365) caution.push({ k: 'idle', n: Math.round(idle / 30) })
+  if (m.stars < 20) caution.push({ k: 'stars', n: m.stars })
   return no.length ? { level: 'no', reasons: no } : caution.length ? { level: 'caution', reasons: caution } : { level: 'ok', reasons: [] }
 }
-
 const SAFE = /^[A-Za-z0-9._-]+$/
 
 /** The commands that install it, or `null` when the form is not one Helm knows. */

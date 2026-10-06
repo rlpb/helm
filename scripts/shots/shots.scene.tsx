@@ -10,7 +10,7 @@ import { BASE, boot, HOME, world } from './world'
 
 const PROJECT = `${HOME}/work/shop`
 const PANE_PROPS = { title: 'Helm', isFocused: true, bodyColumns: 76, placement: 'inline', scroll: {}, view: {} } as any
-const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: {}, view: {} } as any
+const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 120, scroll: {}, view: {} } as any
 
 const plugin = (id: string, description: string): [string, string][] => [[`${BASE}/cache/${id}/.claude-plugin/plugin.json`, JSON.stringify({ description })]]
 const own = (name: string, description: string): [string, string] => [`${BASE}/skills/${name}/SKILL.md`, `---\nname: ${name}\ndescription: ${description}\n---\n`]
@@ -22,20 +22,31 @@ const PLUGINS = {
   'diagrams@community': 'Draw architecture diagrams and visual flows',
 }
 
-const SHOTS: { name: string; band?: boolean; tab?: string; ask?: string; github?: boolean; research?: string; tidy?: boolean }[] = [
+type Shot = { name: string; band?: boolean; open?: boolean; tab?: string; sub?: string; ask?: string; github?: boolean; research?: string; tidy?: boolean }
+const SHOTS: Shot[] = [
   { name: 'band', band: true },
+  { name: 'rest', band: true, open: true },
   { name: 'project', ask: 'a report with charts and citations', github: true },
-  { name: 'research', research: 'https://github.com/example/citation-tools' },
+  { name: 'research', sub: 'sub-discover', research: 'https://github.com/example/citation-tools' },
   { name: 'global', tab: 'global', tidy: true },
+  { name: 'map', tab: 'graph' },
 ]
 
 const REPO = { full_name: 'example/citation-tools', description: 'Format citations', license: { spdx_id: 'Apache-2.0' }, archived: false, pushed_at: '2026-09-20T00:00:00Z', stargazers_count: 412 }
+const NOW = Date.UTC(2026, 9, 6, 12, 0, 0)
+const USES = {
+  'skill:report-writer': { n: 14, last: NOW - 3 * 60_000 },
+  'plugin:superpowers@official': { n: 31, last: NOW - 25 * 60_000 },
+  'skill:humanizer': { n: 6, last: NOW - 3 * 3_600_000 },
+  'plugin:diagrams@community': { n: 2, last: NOW - 2 * 86_400_000 },
+}
 
 for (const shot of SHOTS) {
   test(`draw ${shot.name}`, async ($, on) => {
     world($, on, {
       settings: { enabledPlugins: { 'superpowers@official': true, 'claude-seo@community': false, 'office@official': true, 'diagrams@community': true } },
       tools: shot.github ? [{ name: 'mcp__github__create_repository', mcp: true }] : [],
+      store: { uses: USES },
       files: [
         [`${BASE}/plugins/installed_plugins.json`, JSON.stringify({ plugins: { ...Object.fromEntries(Object.keys(PLUGINS).map(id => [id, [{ installPath: `${BASE}/cache/${id}` }]])), ...(shot.tidy ? { 'old-tool@community': [{ installPath: `${BASE}/cache/old-tool` }] } : {}) } })],
         ...Object.entries(PLUGINS).flatMap(([id, d]) => plugin(id, d)),
@@ -55,12 +66,17 @@ for (const shot of SHOTS) {
     })
     await boot($, PROJECT)
     if (shot.band) {
-      const band = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-      console.log(`HELM-SHOT ${shot.name} ${JSON.stringify({ columns: 100, tree: await band.drawn() })}`)
+      let band = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+      if (shot.open) {
+        await band.press({ key: 'open' })
+        band = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+      }
+      console.log(`HELM-SHOT ${shot.name} ${JSON.stringify({ columns: 120, tree: await band.drawn() })}`)
       return
     }
     const ui = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
     if (shot.tab) await ui.press({ key: shot.tab })
+    if (shot.sub) await ui.press({ key: shot.sub })
     if (shot.ask) await ui.input({ key: 'ask', text: shot.ask })
     if (shot.github) await ui.press({ key: 'gh' })
     if (shot.research) await ui.input({ key: 'research', text: shot.research })

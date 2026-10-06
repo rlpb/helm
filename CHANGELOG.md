@@ -6,6 +6,21 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-06
+
+### Added
+
+- **16 languages** (English, Italiano, Español, Français, Deutsch, Português, Nederlands, Русский, 中文, 日本語, 한국어, हिन्दी, العربية, Türkçe, Polski, Bahasa Indonesia). The panel follows the computer's language and a picker in the footer changes it; the choice is kept.
+- **Limits in the bar:** the 5-hour and weekly limits and the context, as small bars above the prompt that turn amber and red as they fill.
+- **Usage history:** how often and when each tool was used, kept privately on your computer.
+- **Map:** names on the skills that were used, a "used recently" list and an inspector with what each skill does, how often and when it ran.
+
+### Changed
+
+- **Project** is split into **Setup** (describe, pick, turn on, GitHub baseline, in numbered cards) and **Discover** (find a new tool).
+- **Global** is a dashboard: health, updates, most used and what was added for one project as tiles, then every tool by category in colored cards.
+- Checkboxes and symbols are plain marks (✓ ○ ●) instead of brackets.
+
 ## [0.4.0] - 2026-10-06
 
 ### Added
@@ -62,7 +77,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rlpb/helm/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlpb/helm/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rlpb/helm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rlpb/helm/compare/v0.1.1...v0.2.0

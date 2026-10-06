@@ -112,4 +112,9 @@ export const ko: Dict = {
   'cat.docs': '문서',
   'cat.setup': '설정',
   'cat.other': '기타',
+  'setup.empty': '몇 마디로 설명하면 Helm이 설치된 도구 {0}개 중에서 고릅니다.',
+  'g.updates': '업데이트',
+  'g.updatesText': '한 번에 모든 플러그인을 최신으로 만듭니다.',
+  'map.category': '분류',
+  'g.tools': '도구',
 }

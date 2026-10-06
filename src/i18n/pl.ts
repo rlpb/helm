@@ -112,4 +112,9 @@ export const pl: Dict = {
   'cat.docs': 'Dokumenty',
   'cat.setup': 'Konfiguracja',
   'cat.other': 'Inne',
+  'setup.empty': 'Opisz to kilkoma słowami, a Helm wybierze spośród Twoich {0} zainstalowanych narzędzi.',
+  'g.updates': 'Aktualizacje',
+  'g.updatesText': 'Zaktualizuj wszystkie wtyczki jednym naciśnięciem.',
+  'map.category': 'Kategoria',
+  'g.tools': 'Narzędzia',
 }

@@ -112,4 +112,9 @@ export const hi: Dict = {
   'cat.docs': 'दस्तावेज़',
   'cat.setup': 'कॉन्फ़िगरेशन',
   'cat.other': 'अन्य',
+  'setup.empty': 'कुछ शब्दों में बताइए, Helm आपके इंस्टॉल किए {0} टूल में से चुनेगा।',
+  'g.updates': 'अपडेट',
+  'g.updatesText': 'एक दबाव में सभी प्लगइन नवीनतम करें।',
+  'map.category': 'श्रेणी',
+  'g.tools': 'टूल',
 }
