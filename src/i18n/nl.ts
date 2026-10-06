@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const nl: Dict = {
   'tab.project': 'Project',
   'tab.global': 'Globaal',
-  'tab.map': 'Kaart',
   'head.none': 'geen project hier',
   'head.counts': '{0} tools · {1} aan',
   'head.reading': 'lezen…',
@@ -63,13 +62,11 @@ export const nl: Dict = {
   'issue.broken': '{0} is een skillmap zonder SKILL.md.',
   'issue.nodesc': '{0} heeft geen beschrijving, dus Claude kan het niet kiezen.',
   'issue.dup': '{0} en {1} hebben dezelfde naam.',
-  'map.legend': 'Oplichtende punten zijn tools die Claude net gebruikte.',
   'map.uses': '{0} keer gebruikt',
   'map.last': 'laatst {0}',
   'map.never': 'nooit gebruikt',
   'map.on': 'aan',
   'map.off': 'uit',
-  'map.recent': 'Recent gebruikt',
   'msg.on': '{0} staat aan {1}. Een skill werkt direct; een plugin vanaf de volgende chat.',
   'msg.scopeSession': 'voor deze sessie',
   'msg.scopeProject': 'voor dit project',
@@ -145,4 +142,6 @@ export const nl: Dict = {
   'msg.removing': '{0} verwijderen…',
   'g.recheck': 'Opnieuw controleren',
   'msg.skipped': '{0} te traag om te scannen, overgeslagen.',
+  'proj.used': 'Gebruikt in dit project',
+  'proj.empty': 'In dit project is nog niets gebruikt. Wat Claude hier gebruikt verschijnt hier, met hoe vaak.',
 }

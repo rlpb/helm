@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const pl: Dict = {
   'tab.project': 'Projekt',
   'tab.global': 'Ogólne',
-  'tab.map': 'Mapa',
   'head.none': 'brak projektu tutaj',
   'head.counts': 'narzędzi: {0} · włączonych: {1}',
   'head.reading': 'wczytywanie…',
@@ -63,13 +62,11 @@ export const pl: Dict = {
   'issue.broken': '{0} to folder umiejętności bez SKILL.md.',
   'issue.nodesc': '{0} nie ma opisu, więc Claude nie może go wybrać.',
   'issue.dup': '{0} i {1} mają tę samą nazwę.',
-  'map.legend': 'Świecące punkty to narzędzia, których Claude właśnie użył.',
   'map.uses': 'użyć: {0}',
   'map.last': 'ostatnio {0}',
   'map.never': 'nigdy nieużyta',
   'map.on': 'włączona',
   'map.off': 'wyłączona',
-  'map.recent': 'Ostatnio używane',
   'msg.on': '{0} jest włączone {1}. Umiejętność działa od razu; wtyczka od następnego czatu.',
   'msg.scopeSession': 'na tę sesję',
   'msg.scopeProject': 'dla tego projektu',
@@ -145,4 +142,6 @@ export const pl: Dict = {
   'msg.removing': 'Usuwam {0}…',
   'g.recheck': 'Sprawdź ponownie',
   'msg.skipped': '{0} zbyt wolne do skanowania, pominięto.',
+  'proj.used': 'Użyte w tym projekcie',
+  'proj.empty': 'W tym projekcie nic jeszcze nie użyto. To, czego Claude tu użyje, pojawi się wraz z liczbą użyć.',
 }

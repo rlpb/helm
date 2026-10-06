@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const ja: Dict = {
   'tab.project': 'プロジェクト',
   'tab.global': '全体',
-  'tab.map': 'マップ',
   'head.none': 'ここにはプロジェクトがありません',
   'head.counts': 'ツール {0} 個 · 有効 {1} 個',
   'head.reading': '読み込み中…',
@@ -63,13 +62,11 @@ export const ja: Dict = {
   'issue.broken': '{0} は SKILL.md のないスキルフォルダです。',
   'issue.nodesc': '{0} には説明がないため、Claude は選べません。',
   'issue.dup': '{0} と {1} は同じ名前です。',
-  'map.legend': '光っている点は、Claude がいま使ったツールです。',
   'map.uses': '{0} 回使用',
   'map.last': '最後 {0}',
   'map.never': '未使用',
   'map.on': 'オン',
   'map.off': 'オフ',
-  'map.recent': '最近使ったもの',
   'msg.on': '{0} を{1}オンにしました。スキルはすぐに、プラグインは次のチャットから有効です。',
   'msg.scopeSession': 'このセッションで',
   'msg.scopeProject': 'このプロジェクトで',
@@ -145,4 +142,6 @@ export const ja: Dict = {
   'msg.removing': '{0} を削除中…',
   'g.recheck': '再確認',
   'msg.skipped': '{0} 件はスキャンに時間がかかりすぎるためスキップしました。',
+  'proj.used': 'このプロジェクトで使ったもの',
+  'proj.empty': 'このプロジェクトではまだ何も使っていません。Claude がここで使ったものが回数つきで表示されます。',
 }

@@ -5,7 +5,6 @@
 export const en = {
   'tab.project': 'Project',
   'tab.global': 'Global',
-  'tab.map': 'Map',
   'head.none': 'no project here',
   'head.counts': '{0} tools · {1} on',
   'head.reading': 'reading…',
@@ -65,13 +64,11 @@ export const en = {
   'issue.broken': '{0} is a skill folder with no SKILL.md.',
   'issue.nodesc': '{0} has no description, so Claude cannot choose it.',
   'issue.dup': '{0} and {1} are the same name.',
-  'map.legend': 'Lit dots are tools Claude just used.',
   'map.uses': '{0} uses',
   'map.last': 'last {0}',
   'map.never': 'never used',
   'map.on': 'on',
   'map.off': 'off',
-  'map.recent': 'Used recently',
   'msg.on': '{0} is on {1}. A skill applies at once; a plugin from the next chat.',
   'msg.scopeSession': 'for this session',
   'msg.scopeProject': 'for this project',
@@ -147,6 +144,8 @@ export const en = {
   'msg.removing': 'Removing {0}…',
   'g.recheck': 'Check again',
   'msg.skipped': '{0} too slow to scan, skipped.',
+  'proj.used': 'Used in this project',
+  'proj.empty': 'Nothing used in this project yet. What Claude uses here will show up, with how often.',
 }
 
 export type Dict = typeof en

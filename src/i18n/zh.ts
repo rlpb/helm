@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const zh: Dict = {
   'tab.project': '项目',
   'tab.global': '全局',
-  'tab.map': '地图',
   'head.none': '此处没有项目',
   'head.counts': '{0} 个工具 · {1} 个已启用',
   'head.reading': '读取中…',
@@ -63,13 +62,11 @@ export const zh: Dict = {
   'issue.broken': '{0} 是没有 SKILL.md 的技能文件夹。',
   'issue.nodesc': '{0} 没有描述，因此 Claude 无法选用它。',
   'issue.dup': '{0} 与 {1} 同名。',
-  'map.legend': '亮起的点是 Claude 刚刚使用过的工具。',
   'map.uses': '使用 {0} 次',
   'map.last': '最近 {0}',
   'map.never': '从未使用',
   'map.on': '已启用',
   'map.off': '已关闭',
-  'map.recent': '最近使用',
   'msg.on': '{0} 已{1}启用。技能立即生效；插件从下次对话起生效。',
   'msg.scopeSession': '在本次会话',
   'msg.scopeProject': '在此项目',
@@ -145,4 +142,6 @@ export const zh: Dict = {
   'msg.removing': '正在移除 {0}…',
   'g.recheck': '重新检查',
   'msg.skipped': '{0} 个扫描太慢，已跳过。',
+  'proj.used': '本项目中用到的',
+  'proj.empty': '本项目还没有用到任何工具。Claude 在这里用到的会显示出来，并带次数。',
 }

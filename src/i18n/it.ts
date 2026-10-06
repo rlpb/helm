@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const it: Dict = {
   'tab.project': 'Progetto',
   'tab.global': 'Globale',
-  'tab.map': 'Mappa',
   'head.none': 'nessun progetto qui',
   'head.counts': '{0} strumenti · {1} attivi',
   'head.reading': 'lettura…',
@@ -63,13 +62,11 @@ export const it: Dict = {
   'issue.broken': '{0} è una cartella di skill senza SKILL.md.',
   'issue.nodesc': '{0} non ha descrizione, quindi Claude non può sceglierlo.',
   'issue.dup': '{0} e {1} hanno lo stesso nome.',
-  'map.legend': 'I punti accesi sono strumenti che Claude ha appena usato.',
   'map.uses': '{0} usi',
   'map.last': 'ultimo {0}',
   'map.never': 'mai usata',
   'map.on': 'accesa',
   'map.off': 'spenta',
-  'map.recent': 'Usati di recente',
   'msg.on': '{0} è acceso {1}. Una skill vale subito; un plugin dalla prossima chat.',
   'msg.scopeSession': 'per questa sessione',
   'msg.scopeProject': 'per questo progetto',
@@ -145,4 +142,6 @@ export const it: Dict = {
   'msg.removing': 'Rimuovo {0}…',
   'g.recheck': 'Ricontrolla',
   'msg.skipped': '{0} troppo lente da scansionare, saltate.',
+  'proj.used': 'Usate in questo progetto',
+  'proj.empty': 'Ancora niente di usato in questo progetto. Ciò che Claude usa qui comparirà, con quante volte.',
 }

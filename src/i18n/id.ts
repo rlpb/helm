@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const id: Dict = {
   'tab.project': 'Proyek',
   'tab.global': 'Global',
-  'tab.map': 'Peta',
   'head.none': 'tidak ada proyek di sini',
   'head.counts': '{0} alat · {1} aktif',
   'head.reading': 'membaca…',
@@ -63,13 +62,11 @@ export const id: Dict = {
   'issue.broken': '{0} adalah folder skill tanpa SKILL.md.',
   'issue.nodesc': '{0} tidak punya deskripsi, jadi Claude tidak bisa memilihnya.',
   'issue.dup': '{0} dan {1} memakai nama yang sama.',
-  'map.legend': 'Titik yang menyala adalah alat yang baru saja dipakai Claude.',
   'map.uses': '{0} kali dipakai',
   'map.last': 'terakhir {0}',
   'map.never': 'belum pernah dipakai',
   'map.on': 'aktif',
   'map.off': 'mati',
-  'map.recent': 'Baru dipakai',
   'msg.on': '{0} aktif {1}. Skill berlaku langsung; plugin mulai obrolan berikutnya.',
   'msg.scopeSession': 'untuk sesi ini',
   'msg.scopeProject': 'untuk proyek ini',
@@ -145,4 +142,6 @@ export const id: Dict = {
   'msg.removing': 'Menghapus {0}…',
   'g.recheck': 'Periksa lagi',
   'msg.skipped': '{0} terlalu lambat dipindai, dilewati.',
+  'proj.used': 'Dipakai di proyek ini',
+  'proj.empty': 'Belum ada yang dipakai di proyek ini. Yang dipakai Claude di sini akan muncul beserta jumlahnya.',
 }

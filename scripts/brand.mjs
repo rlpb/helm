@@ -50,15 +50,14 @@ const banner = () => `<!doctype html><meta charset="utf-8"><style>${base}
 <div class="text">
   <div class="mark"><h1>Helm</h1><div class="dot"></div></div>
   <p>The control panel for <b>Claude Code</b>. Set up projects, see what runs, vet new tools.</p>
-  <div class="chips"><span>Per-project setup</span><span>Live map</span><span>Vet before install</span></div>
+  <div class="chips"><span>Per-project setup</span><span>What you use</span><span>Vet before install</span></div>
 </div>`
 
 const CARDS = [
   { file: 'rest', accent: '#6fd08c', kicker: 'Always in view', title: 'Your limits, one glance away', text: 'A quiet row above the prompt: the project, the 5-hour and weekly limits, the context, and the skill Claude is using now.' },
-  { file: 'project', accent: '#5aa9ff', kicker: 'Set up', title: 'Tell it what you are building', text: 'Helm shortlists the fitting tools you already have, and one press turns them on for that folder only. Undo restores it exactly.' },
+  { file: 'project', accent: '#5aa9ff', kicker: 'Set up', title: 'Tell it what you are building', text: 'See what Claude used in this folder and how often, then let Helm shortlist the fitting tools: one press turns them on for that folder only.' },
   { file: 'research', accent: '#f2b84b', kicker: 'Discover', title: 'Check a tool before it comes in', text: 'Paste a link or a name. Helm reads the repository, gives a plain verdict, and installs only after your yes.' },
   { file: 'global', accent: '#b28cff', kicker: 'Keep healthy', title: 'A dashboard for everything you have', text: 'Health, updates, what you use most, and every tool by category. Tidy up and update in a press, without touching a project.' },
-  { file: 'map', accent: '#4fd1d9', kicker: 'See', title: 'A live map of your tools', text: 'Skills light up as Claude uses them. Pick any one to see what it does, how often and when.' },
 ]
 
 const card = c => `<!doctype html><meta charset="utf-8"><style>${base}

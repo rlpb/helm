@@ -76,17 +76,6 @@ test('the research box reads a repository and offers an install only after a ver
   expect(w.ran.find(a => a[2] === 'install')).toEqual(['claude', 'plugin', 'install', 'tool@demo', '--scope', 'local'])
 })
 
-test('the map is one card per category, the same on the terminal and on the desktop', async ($, on) => {
-  world($, on)
-  await boot($, PROJECT)
-  for (const surface of ['terminal', 'desktop']) {
-    const ui = await pane($, surface)
-    await ui.press({ key: 'graph' })
-    expect(await ui.find({ key: 'm-build' })).toBeDefined()
-    expect(await textOf(ui)).toContain('Lit dots')
-  }
-})
-
 test('the GitHub box appears only with a GitHub connector, and its brief rides the first prompt once', async ($, on) => {
   world($, on, { tools: [{ name: 'mcp__github__create_repository', mcp: true }] })
   await boot($, PROJECT)

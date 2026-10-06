@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const hi: Dict = {
   'tab.project': 'प्रोजेक्ट',
   'tab.global': 'सभी',
-  'tab.map': 'नक्शा',
   'head.none': 'यहाँ कोई प्रोजेक्ट नहीं है',
   'head.counts': '{0} टूल · {1} चालू',
   'head.reading': 'पढ़ रहा है…',
@@ -63,13 +62,11 @@ export const hi: Dict = {
   'issue.broken': '{0} बिना SKILL.md वाला स्किल फ़ोल्डर है।',
   'issue.nodesc': '{0} का विवरण नहीं है, इसलिए Claude इसे चुन नहीं सकता।',
   'issue.dup': '{0} और {1} का नाम एक ही है।',
-  'map.legend': 'जलते बिंदु वे टूल हैं जिन्हें Claude ने अभी इस्तेमाल किया।',
   'map.uses': '{0} बार इस्तेमाल',
   'map.last': 'आख़िरी {0}',
   'map.never': 'कभी इस्तेमाल नहीं हुई',
   'map.on': 'चालू',
   'map.off': 'बंद',
-  'map.recent': 'हाल में इस्तेमाल',
   'msg.on': '{0} {1} चालू है। स्किल तुरंत लागू होती है; प्लगइन अगली चैट से।',
   'msg.scopeSession': 'इस सत्र के लिए',
   'msg.scopeProject': 'इस प्रोजेक्ट के लिए',
@@ -145,4 +142,6 @@ export const hi: Dict = {
   'msg.removing': '{0} हटा रहा है…',
   'g.recheck': 'फिर जाँचें',
   'msg.skipped': '{0} स्कैन के लिए बहुत धीमे थे, छोड़ दिए गए।',
+  'proj.used': 'इस प्रोजेक्ट में इस्तेमाल हुए',
+  'proj.empty': 'इस प्रोजेक्ट में अभी कुछ इस्तेमाल नहीं हुआ। Claude यहाँ जो इस्तेमाल करेगा, कितनी बार, वह यहाँ दिखेगा।',
 }

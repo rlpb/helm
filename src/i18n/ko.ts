@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const ko: Dict = {
   'tab.project': '프로젝트',
   'tab.global': '전체',
-  'tab.map': '지도',
   'head.none': '여기에는 프로젝트가 없습니다',
   'head.counts': '도구 {0}개 · {1}개 켜짐',
   'head.reading': '읽는 중…',
@@ -63,13 +62,11 @@ export const ko: Dict = {
   'issue.broken': '{0}은(는) SKILL.md가 없는 스킬 폴더입니다.',
   'issue.nodesc': '{0}에 설명이 없어 Claude가 선택할 수 없습니다.',
   'issue.dup': '{0}와(과) {1}의 이름이 같습니다.',
-  'map.legend': '불이 켜진 점은 Claude가 방금 사용한 도구입니다.',
   'map.uses': '{0}회 사용',
   'map.last': '마지막 {0}',
   'map.never': '사용한 적 없음',
   'map.on': '켜짐',
   'map.off': '꺼짐',
-  'map.recent': '최근 사용',
   'msg.on': '{0}이(가) {1} 켜졌습니다. 스킬은 즉시, 플러그인은 다음 채팅부터 적용됩니다.',
   'msg.scopeSession': '이 세션에서',
   'msg.scopeProject': '이 프로젝트에서',
@@ -145,4 +142,6 @@ export const ko: Dict = {
   'msg.removing': '{0} 제거 중…',
   'g.recheck': '다시 확인',
   'msg.skipped': '{0}개는 검사가 너무 느려 건너뛰었습니다.',
+  'proj.used': '이 프로젝트에서 쓴 것',
+  'proj.empty': '이 프로젝트에서는 아직 쓴 것이 없습니다. Claude가 여기서 쓰는 것이 횟수와 함께 표시됩니다.',
 }

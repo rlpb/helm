@@ -38,22 +38,3 @@ test('a tool is not offered for the word "claude" alone', async ($, on) => {
   await $.prompt.submit({ text: 'claude fix the login code please' })
   expect(await textOf(await band($))).not.toContain('is off and fits this')
 })
-
-for (const surface of ['terminal', 'desktop']) {
-  test(`the Map draws with a large index, on ${surface}`, async ($, on) => {
-    const cats = ['build', 'write', 'research', 'design', 'web', 'data', 'security', 'docs']
-    const files: [string, string][] = Array.from({ length: 190 }, (_, i): [string, string] => [
-      `/helm-demo-home/.claude/skills/skill-${i}/SKILL.md`,
-      `---\nname: skill-${i}\ndescription: ${cats[i % cats.length]} thing number ${i}\n---\n`,
-    ])
-    world($, on, { files })
-    await boot($, PROJECT)
-    const ui = await $.ui.mount({ plugin: 'helm', surface, component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
-    await ui.press({ key: 'graph' })
-    const drawn = JSON.stringify(await ui.drawn())
-    // One card per category, and a dot for every one of the 190 tools.
-    expect((drawn.match(/"key":"m-[a-z]+"/g) ?? []).length).toBeGreaterThanOrEqual(3)
-    expect((drawn.match(/[●○◉] /g) ?? []).length).toBeGreaterThanOrEqual(190)
-    expect(JSON.stringify(await ui.drawn())).not.toContain('could not be drawn')
-  })
-}

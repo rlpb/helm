@@ -45,7 +45,5 @@ for (const surface of ['terminal', 'desktop']) {
     await check('global')
     await ui.press({ key: 'check' })
     await check('global after tidy')
-    await ui.press({ key: 'graph' })
-    await check('map')
   })
 }

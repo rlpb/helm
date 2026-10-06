@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const ar: Dict = {
   'tab.project': 'المشروع',
   'tab.global': 'عام',
-  'tab.map': 'الخريطة',
   'head.none': 'لا يوجد مشروع هنا',
   'head.counts': '{0} أدوات · {1} مفعّلة',
   'head.reading': 'جارٍ القراءة…',
@@ -63,13 +62,11 @@ export const ar: Dict = {
   'issue.broken': '{0} مجلد مهارة بلا SKILL.md.',
   'issue.nodesc': '{0} بلا وصف، لذلك لا يستطيع Claude اختياره.',
   'issue.dup': '{0} و{1} بالاسم نفسه.',
-  'map.legend': 'النقاط المضيئة أدوات استخدمها Claude للتو.',
   'map.uses': '{0} استخدامات',
   'map.last': 'آخر مرة {0}',
   'map.never': 'لم تُستخدم قط',
   'map.on': 'مفعّلة',
   'map.off': 'متوقفة',
-  'map.recent': 'استُخدمت مؤخرًا',
   'msg.on': '{0} مفعّل {1}. المهارة تعمل فورًا؛ والإضافة من المحادثة التالية.',
   'msg.scopeSession': 'لهذه الجلسة',
   'msg.scopeProject': 'لهذا المشروع',
@@ -145,4 +142,6 @@ export const ar: Dict = {
   'msg.removing': 'جارٍ إزالة {0}…',
   'g.recheck': 'أعد الفحص',
   'msg.skipped': '{0} بطيئة جدًا للفحص، تم تخطيها.',
+  'proj.used': 'المستخدم في هذا المشروع',
+  'proj.empty': 'لم يُستخدم شيء في هذا المشروع بعد. ما يستخدمه Claude هنا سيظهر مع عدد المرات.',
 }

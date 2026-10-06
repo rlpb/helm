@@ -18,7 +18,7 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 
 - **Set up a project.** Open a new folder and Helm asks what you are building. It shortlists the fitting tools from what you already have installed, and one press turns them on for that folder only. Undo puts the folder back exactly as it was.
 - **Vet a tool.** Paste a GitHub link, `owner/name` or just a name. Helm reads the repository (license, archived or not, last update, stars, and whether it holds a plugin or a skill), gives a plain verdict, and installs only after you say yes. A tool you added for one project is offered later for all of them.
-- **See what is in use.** The **Map** tab shows everything installed as one card per category with a dot per tool. When Claude uses a skill, its dot lights up, and the tools used most recently are listed below. It costs no tokens.
+- **See what is in use here.** The top of the **Project** page lists only what Claude used in this folder, by category, with how often and when. A skill that has just run is lit. It costs no tokens.
 - **Keep your limits in view.** A quiet row above the prompt shows the 5-hour and weekly limits and the context as small bars, plus the skill Claude is using now, with a security dot and an **Open Helm** button. The figures follow the session as it runs.
 - **Speaks your language.** 16 languages, following the computer's by default, changeable from the panel.
 - **Check before you trust.** [SkillSpector](https://github.com/NVIDIA/SkillSpector) by NVIDIA scans every skill and plugin you have, and every new tool before it can be installed, for prompt injection, data theft and risky code. A scan that says "do not install" hides the Install button. It is static-only: no model, no key, nothing leaves your computer. Helm keeps it up to date.
@@ -30,7 +30,7 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 </div>
 
 <div align="center">
-<img src="docs/screenshot-map.png" alt="The Map tab: a card per category with a dot per tool, a lit disc for what Claude just used" width="560">
+<img src="docs/screenshot-project.png" alt="The Project page: what Claude used in this folder by category, then the setup steps" width="560">
 </div>
 
 ## Install
@@ -59,7 +59,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.10.1.zip --repo rlpb/helm
+gh attestation verify helm-0.11.0.zip --repo rlpb/helm
 ```
 
 ## Support

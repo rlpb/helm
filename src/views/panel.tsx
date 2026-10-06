@@ -97,7 +97,6 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
       <Box marginTop={1} columnGap={1}>
         {tab('project', T('tab.project'))}
         {tab('global', T('tab.global'))}
-        {tab('graph', T('tab.map'))}
       </Box>
       {rule}
       {topLine && (
@@ -256,8 +255,58 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
     </Box>
   )
 
+  // ---- what Claude used in this project: by category, with how much ----
+  const hereRows = Object.entries(c.puses ?? {}).flatMap(([key, u]) => {
+    const entry = index.find(x => x.key === key)
+    return entry ? [{ u, entry }] : []
+  })
+  const hereMax = Math.max(1, ...hereRows.map(r => r.u.n))
+  const hereGroups = [...new Set(hereRows.map(r => r.entry.category))]
+    .map(cat => {
+      const rows = hereRows.filter(r => r.entry.category === cat).sort((a, b) => b.u.n - a.u.n)
+      return { cat, rows, total: rows.reduce((sum, r) => sum + r.u.n, 0) }
+    })
+    .sort((a, b) => b.total - a.total)
+  const usedHere = card(
+    'used',
+    <Box flexDirection="column">
+      <Box justifyContent="space-between">
+        {title(T('proj.used'), '#6fd08c')}
+        {hereRows.length > 0 ? <Text dimColor>{T('map.uses', hereRows.reduce((sum, r) => sum + r.u.n, 0))}</Text> : null}
+      </Box>
+      {hereGroups.length === 0 && <Text dimColor>{T('proj.empty')}</Text>}
+      {hereGroups.map(g => (
+        <Box key={`ug-${g.cat}`} flexDirection="column" marginTop={1}>
+          <Box columnGap={1}>
+            <Text bold color={hex(g.cat)}>
+              {T(`cat.${g.cat}` as Key)}
+            </Text>
+            <Text dimColor>{`×${g.total}`}</Text>
+          </Box>
+          {g.rows.map(({ u, entry }) => {
+            const lit = glow(c.used, entry.key, now) > 0
+            return (
+              <Box key={`ur-${entry.key}`} columnGap={1}>
+                <Text color={lit ? '#ffffff' : hex(g.cat)} bold={lit}>
+                  {lit ? '◉' : '●'}
+                </Text>
+                <Box width={13}>
+                  <Text color={hex(g.cat)}>{'█'.repeat(Math.max(1, Math.round((u.n / hereMax) * 12)))}</Text>
+                </Box>
+                <Text bold>{entry.name}</Text>
+                <Text dimColor>{`×${u.n} · ${ago(now - u.last)}`}</Text>
+              </Box>
+            )
+          })}
+        </Box>
+      ))}
+    </Box>,
+    '#6fd08c',
+  )
+
   const projectTab = (
     <Box flexDirection="column">
+      {here && usedHere}
       {here && setup}
       {discover}
     </Box>
@@ -459,72 +508,10 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
     </Box>
   )
 
-  // ---- Map: one card per category, sized by how many tools it holds, each tool a dot ----
-  // Made of the panel's own elements, so it wraps and resizes with the window and is never cut or overlapped.
-  const recent = Object.entries(c.uses)
-    .filter(([key]) => index.some(x => x.key === key))
-    .sort((x, y) => y[1].last - x[1].last)
-  const mapCards = byCategory.map(r => {
-    const items = index.filter(x => x.category === r.category)
-    const minW = Math.min(Math.max(18, width - 4), Math.max(18, Math.round(12 + Math.sqrt(r.total) * 5)))
-    return (
-      <Box key={`m-${r.category}`} flexDirection="column" borderStyle="round" borderColor={hex(r.category)} paddingX={1} flexGrow={r.total} minWidth={minW}>
-        <Box justifyContent="space-between">
-          <Text bold color={hex(r.category)}>
-            {T(`cat.${r.category}` as Key)}
-          </Text>
-          <Text dimColor>{`${r.on}/${r.total}`}</Text>
-        </Box>
-        <Text>
-          {items.map(x => {
-            const lit = glow(c.used, x.key, now) > 0
-            return (
-              <Text key={x.key} color={lit ? '#ffffff' : x.on ? hex(r.category) : 'inactive'} bold={lit}>
-                {`${lit ? '◉' : x.on ? '●' : '○'} `}
-              </Text>
-            )
-          })}
-        </Text>
-      </Box>
-    )
-  })
-  const mapTab = (
-    <Box flexDirection="column">
-      <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={0} marginTop={1}>
-        {mapCards}
-      </Box>
-      <Box marginTop={1} columnGap={2} flexDirection="row" flexWrap="wrap">
-        <Text dimColor>{`● ${T('map.on')}`}</Text>
-        <Text dimColor>{`○ ${T('map.off')}`}</Text>
-        <Text dimColor>{`◉ ${T('map.legend')}`}</Text>
-      </Box>
-      {recent.length > 0 &&
-        card(
-          'recent',
-          <Box flexDirection="column">
-            {title(T('map.recent'), '#6fd08c')}
-            <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
-              {recent.slice(0, 6).map(([key, u]) => {
-                const entry = index.find(x => x.key === key)!
-                return (
-                  <Box key={`rec-${key}`} columnGap={1}>
-                    <Text color={hex(entry.category)}>●</Text>
-                    <Text bold>{entry.name}</Text>
-                    <Text dimColor>{`×${u.n} · ${ago(now - u.last)}`}</Text>
-                  </Box>
-                )
-              })}
-            </Box>
-          </Box>,
-          '#6fd08c',
-        )}
-    </Box>
-  )
-
   return (
     <Box flexDirection="column">
       {header}
-      {n.tab === 'graph' ? mapTab : n.tab === 'global' ? globalTab : projectTab}
+      {n.tab === 'global' ? globalTab : projectTab}
       {footer}
     </Box>
   )

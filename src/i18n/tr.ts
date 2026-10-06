@@ -3,7 +3,6 @@ import type { Dict } from './en'
 export const tr: Dict = {
   'tab.project': 'Proje',
   'tab.global': 'Genel',
-  'tab.map': 'Harita',
   'head.none': 'burada proje yok',
   'head.counts': '{0} araç · {1} açık',
   'head.reading': 'okunuyor…',
@@ -63,13 +62,11 @@ export const tr: Dict = {
   'issue.broken': '{0}, SKILL.md olmayan bir beceri klasörü.',
   'issue.nodesc': '{0} için açıklama yok, bu yüzden Claude onu seçemez.',
   'issue.dup': '{0} ve {1} aynı ada sahip.',
-  'map.legend': 'Yanan noktalar, Claude’un az önce kullandığı araçlardır.',
   'map.uses': '{0} kullanım',
   'map.last': 'son {0}',
   'map.never': 'hiç kullanılmadı',
   'map.on': 'açık',
   'map.off': 'kapalı',
-  'map.recent': 'Son kullanılanlar',
   'msg.on': '{0} {1} açık. Beceri hemen geçerli olur; eklenti bir sonraki sohbetten itibaren.',
   'msg.scopeSession': 'bu oturum için',
   'msg.scopeProject': 'bu proje için',
@@ -145,4 +142,6 @@ export const tr: Dict = {
   'msg.removing': '{0} kaldırılıyor…',
   'g.recheck': 'Yeniden denetle',
   'msg.skipped': '{0} taranamayacak kadar yavaştı, atlandı.',
+  'proj.used': 'Bu projede kullanılanlar',
+  'proj.empty': 'Bu projede henüz bir şey kullanılmadı. Claude’un burada kullandıkları sayısıyla görünecek.',
 }

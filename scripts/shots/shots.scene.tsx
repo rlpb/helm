@@ -6,6 +6,7 @@
 
 import { test } from 'claude-code/testing'
 
+import { projectKey } from '../src/project'
 import { BASE, boot, HOME, world } from './world'
 
 const PROJECT = `${HOME}/work/shop`
@@ -29,11 +30,16 @@ const SHOTS: Shot[] = [
   { name: 'project', ask: 'a report with charts and citations', github: true },
   { name: 'research', research: 'https://github.com/example/citation-tools' },
   { name: 'global', tab: 'global', tidy: true, scan: true, fold: ['fold-build', 'fold-write'] },
-  { name: 'map', tab: 'graph' },
 ]
 
 const REPO = { full_name: 'example/citation-tools', description: 'Format citations', license: { spdx_id: 'Apache-2.0' }, archived: false, pushed_at: '2026-09-20T00:00:00Z', stargazers_count: 412 }
 const NOW = Date.UTC(2026, 9, 6, 12, 0, 0)
+// What was used in this folder alone: less than everything, in made-up numbers.
+const PUSES = {
+  'skill:report-writer': { n: 14, last: NOW - 3 * 60_000 },
+  'plugin:superpowers@official': { n: 9, last: NOW - 25 * 60_000 },
+  'skill:humanizer': { n: 4, last: NOW - 3 * 3_600_000 },
+}
 const USES = {
   'skill:report-writer': { n: 14, last: NOW - 3 * 60_000 },
   'plugin:superpowers@official': { n: 31, last: NOW - 25 * 60_000 },
@@ -46,7 +52,7 @@ for (const shot of SHOTS) {
     world($, on, {
       settings: { enabledPlugins: { 'superpowers@official': true, 'claude-seo@community': false, 'office@official': true, 'diagrams@community': true } },
       tools: shot.github ? [{ name: 'mcp__github__create_repository', mcp: true }] : [],
-      store: { uses: USES },
+      store: { uses: USES, [`puses:${projectKey(PROJECT)}`]: PUSES },
       files: [
         [`${BASE}/plugins/installed_plugins.json`, JSON.stringify({ plugins: { ...Object.fromEntries(Object.keys(PLUGINS).map(id => [id, [{ installPath: `${BASE}/cache/${id}` }]])), ...(shot.tidy ? { 'old-tool@community': [{ installPath: `${BASE}/cache/old-tool` }] } : {}) } })],
         ...Object.entries(PLUGINS).flatMap(([id, d]) => plugin(id, d)),

@@ -33,6 +33,7 @@ const core = atom(
     pref: 'auto',
     usage: null,
     uses: {},
+    puses: {},
     hint: null,
     setup: DEFAULT_SETUP,
     used: {},
@@ -59,6 +60,7 @@ const stateKey = (key: string) => `project:${key}`
 const undoKey = (key: string) => `undo:${key}`
 const tempKey = (key: string) => `temp:${key}`
 const ignoreKey = (key: string) => `ignored:${key}`
+const pusesKey = (key: string) => `puses:${key}`
 
 /** A line in the panel's footer, in the language shown. */
 async function say($: any, key: Key, ...vars: (string | number)[]) {
@@ -140,10 +142,14 @@ let lastUsage = 0
 
 /** The same, at most once every few seconds: it is asked after every tool call, every prompt and while the row redraws during a turn. */
 async function refreshUsageSoon($: any) {
-  const now = await $.clock.now()
-  if (now - lastUsage < 3000) return
-  lastUsage = now
-  await refreshUsage($).catch(() => {})
+  try {
+    const now = await $.clock.now()
+    if (now - lastUsage < 3000) return
+    lastUsage = now
+    await refreshUsage($)
+  } catch {
+    // The session may be going away; the next look will catch up.
+  }
 }
 
 /** How full the 5-hour limit, the weekly limit and the context are. */
@@ -561,11 +567,12 @@ export const register: Register = on => {
     const setup = { ...DEFAULT_SETUP, ...(((await $.store.get('github-setup')) as object | undefined) ?? {}) }
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
     const uses = ((await $.store.get('uses')) as Core['uses'] | undefined) ?? {}
+    const puses = project ? (((await $.store.get(pusesKey(project.key))) as Core['puses'] | undefined) ?? {}) : {}
     const saidPref = await $.store.get('lang-pref')
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
     const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
-    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, failed: false, ask: null }))
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, puses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, failed: false, ask: null }))
     await refreshUsage($)
     void runCheckup($).catch(() => {})
     await probeScanner($)
@@ -588,13 +595,20 @@ export const register: Register = on => {
       const at = await $.clock.now()
       const uses = { ...c.uses, [entry.key]: { n: (c.uses[entry.key]?.n ?? 0) + 1, last: at } }
       await $.store.set('uses', uses)
-      await update($, core, s => ({ ...s, uses, used: { ...s.used, [entry.key]: at } }))
+      // And in this project alone, so the project page shows what was used here, not everywhere.
+      const puses = c.project ? { ...c.puses, [entry.key]: { n: (c.puses[entry.key]?.n ?? 0) + 1, last: at } } : c.puses
+      if (c.project) await $.store.set(pusesKey(c.project.key), puses)
+      await update($, core, s => ({ ...s, uses, puses, used: { ...s.used, [entry.key]: at } }))
       if (isTerminal && !fading) {
         fading = true
         void (async () => {
-          while ((await $.clock.now()) - at < GLOW_MS + 500) {
-            await $.clock.sleep(500)
-            await update($, core, s => ({ ...s, tick: s.tick + 1 }))
+          try {
+            while ((await $.clock.now()) - at < GLOW_MS + 500) {
+              await $.clock.sleep(500)
+              await update($, core, s => ({ ...s, tick: s.tick + 1 }))
+            }
+          } catch {
+            // The session went away while the glow was fading.
           }
           fading = false
         })()
