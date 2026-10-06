@@ -11,7 +11,7 @@ import { applyPicks, setSkillOff, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 import { DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
-import { GLOW_MS, cells, glow, layout, svg } from '../src/graph'
+import { GLOW_MS, glow } from '../src/graph'
 import { foldVerdict, installCmd, isOverridable, parseScan, parseVersion, repoTarget, scanCmd, upgradeCmd, versionCmd } from '../src/skillspector'
 import { detectLang, isLang, t } from '../src/i18n'
 import type { Key, Lang } from '../src/i18n'
@@ -136,6 +136,16 @@ async function setLang($: any, pref: string) {
   await update($, core, s => ({ ...s, pref: pref as Core['pref'], lang, message: null }))
 }
 
+let lastUsage = 0
+
+/** The same, at most once every few seconds: it is asked after every tool call, every prompt and while the row redraws during a turn. */
+async function refreshUsageSoon($: any) {
+  const now = await $.clock.now()
+  if (now - lastUsage < 3000) return
+  lastUsage = now
+  await refreshUsage($).catch(() => {})
+}
+
 /** How full the 5-hour limit, the weekly limit and the context are. */
 async function refreshUsage($: any) {
   const u = await $.session.usage().catch(() => null)
@@ -147,7 +157,10 @@ async function refreshUsage($: any) {
   const ctx = u.context?.percent ?? u.context?.breakdown?.percentage
   // A session that has already cost something has a conversation in it.
   const spoken = Number(u.cost?.usd ?? 0) > 0
-  await update($, core, s => ({ ...s, chat: s.chat || spoken, usage: { five: limit(/five|5/i), week: limit(/seven|week|7/i), ctx: ctx == null ? null : Math.round(Number(ctx)) } }))
+  const usage = { five: limit(/five|5/i), week: limit(/seven|week|7/i), ctx: ctx == null ? null : Math.round(Number(ctx)) }
+  const before = (await read($, core)).usage
+  if (before && before.five === usage.five && before.week === usage.week && before.ctx === usage.ctx) return
+  await update($, core, s => ({ ...s, chat: s.chat || spoken, usage }))
 }
 
 // ---- turning tools on for a project ----
@@ -466,7 +479,13 @@ async function runScan($: any) {
         } else skipped += 1
       }
       done += 1
-      await update($, core, s => ({ ...s, scanning: { done, total: targets.length } }))
+      // Each result counts at once: the dot above the prompt turns as soon as there is something to say, and a run that is cut short keeps what it found.
+      const mine = scans[target.key]
+      await update($, core, s => ({ ...s, scans: mine ? { ...s.scans, [target.key]: mine } : s.scans, scanning: { done, total: targets.length } }))
+      if (done % 8 === 0) {
+        await $.store.set('scans', scans)
+        await $.store.set('scan-fps', fps)
+      }
     }
   }
   await Promise.all([worker(), worker(), worker(), worker()])
@@ -584,6 +603,13 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The limits move with every answer of the model, not only when a turn ends: look again after each tool call.
+  on('tool.call', async ($, e, next) => {
+    const result = await next(e)
+    void refreshUsageSoon($)
+    return result
+  })
+
   on('turn.complete', async ($, e, next) => {
     await refreshUsage($)
     return next(e)
@@ -591,6 +617,7 @@ export const register: Register = on => {
 
   // A tool that fits what was just typed is offered, and the GitHub brief rides on the first prompt of a project, once.
   on('prompt.submit', async ($, e, next) => {
+    void refreshUsageSoon($)
     const c = await read($, core)
     if (!c.chat) await update($, core, s => ({ ...s, chat: true }))
     if (c.project && c.state !== 'declined') {
@@ -617,6 +644,8 @@ export const register: Register = on => {
     const ui = $.ui.resolve(e as any) as any
     const c = await read($, core)
     const now = await $.clock.now()
+    // The row redraws while a turn runs; each redraw is a chance to refresh the figures (throttled).
+    if (e.props.isWorking) void refreshUsageSoon($)
     const lit = Object.entries(c.used)
       .sort((x, y) => y[1] - x[1])
       .find(([key, at]) => glow({ [key]: at }, key, now) > 0)
@@ -649,7 +678,6 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
-      zoom: (cat: string) => void update($, nav, s => ({ ...s, zoom: cat === 'all' ? null : cat })),
       fold: (cat: string) => void update($, nav, s => ({ ...s, open: (s.open ?? []).includes(cat) ? s.open.filter(x => x !== cat) : [...(s.open ?? []), cat] })),
       foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: (s.open ?? []).length > 0 ? [] : cats })),
       inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: s.inspect === key ? null : key })),
@@ -674,31 +702,9 @@ export const register: Register = on => {
       toggle: (key: string) => void toggleTool($, key),
       anyway: (scope: 'user' | 'local') => void installAnyway($, scope),
     }
-    let mapNote = ''
     try {
-      let map: any = null
-      if (n.tab === 'graph') {
-        // The picture follows the panel: as wide as it is (a column is about 8 pixels), and the shape changes with the width, so a narrow
-        // panel gets a taller, tighter arrangement instead of a shrunk wide one.
-        const cols = e.props.bodyColumns ?? 80
-        const pw = terminal ? 760 : Math.max(360, Math.min(1200, Math.round(cols * 8)))
-        const ratio = pw >= 900 ? 0.56 : pw >= 700 ? 0.62 : pw >= 560 ? 0.78 : 0.95
-        const lay = layout(c.index ?? [], pw, Math.round(pw * ratio))
-        mapNote = `${cols} cols · ${lay.w}×${lay.h}`
-        const opts = {
-          label: (cat: string) => t(c.lang, `cat.${cat}` as Key),
-          uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])),
-          note: (key: string) => (c.uses[key] ? `${t(c.lang, 'map.uses', c.uses[key].n)} · ${t(c.lang, 'map.last', ago(now - c.uses[key].last))}` : ''),
-          states: { on: t(c.lang, 'map.on'), off: t(c.lang, 'map.off') },
-        }
-        isTerminal = terminal
-        map = terminal ? (
-          <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
-        ) : (
-          <ui.Svg source={svg(lay, c.used, now, { ...opts, zoom: n.zoom })} alt="Map of installed tools, lit when used" width={lay.w} height={lay.h} isInteractive />
-        )
-      }
-      return Panel({ ui, c, n, github, act, terminal, width, map, mapNote, now, lang: c.lang })
+      isTerminal = terminal
+      return Panel({ ui, c, n, github, act, terminal, width, now, lang: c.lang })
     } catch (err) {
       // A panel that cannot draw says why, instead of the engine's empty "nothing to show".
       return (

@@ -76,15 +76,15 @@ test('the research box reads a repository and offers an install only after a ver
   expect(w.ran.find(a => a[2] === 'install')).toEqual(['claude', 'plugin', 'install', 'tool@demo', '--scope', 'local'])
 })
 
-test('the map draws on the terminal and on a surface with SVG', async ($, on) => {
+test('the map is one card per category, the same on the terminal and on the desktop', async ($, on) => {
   world($, on)
   await boot($, PROJECT)
-  const term = await pane($)
-  await term.press({ key: 'graph' })
-  expect(await term.find({ key: 'map' })).toBeDefined()
-  const desk = await pane($, 'desktop')
-  await desk.press({ key: 'graph' })
-  expect(await textOf(desk)).toContain('Lit dots')
+  for (const surface of ['terminal', 'desktop']) {
+    const ui = await pane($, surface)
+    await ui.press({ key: 'graph' })
+    expect(await ui.find({ key: 'm-build' })).toBeDefined()
+    expect(await textOf(ui)).toContain('Lit dots')
+  }
 })
 
 test('the GitHub box appears only with a GitHub connector, and its brief rides the first prompt once', async ($, on) => {
@@ -181,6 +181,18 @@ test('the panel speaks the computer language by default, and the choice sticks',
   expect(w.store.get('lang-pref')).toBe('de')
   await ui.select({ key: 'lang', value: 'auto' })
   expect(await textOf(ui)).toContain('COSA STAI COSTRUENDO?')
+})
+
+test('the limits follow the session between turns: a prompt looks again', async ($, on) => {
+  let five = 24
+  world($, on, { five: () => five })
+  await boot($, PROJECT)
+  await (await band($)).press({ key: 'open' })
+  expect(await textOf(await band($))).toContain('24%')
+  five = 40
+  await $.prompt.submit({ text: 'hello' })
+  await new Promise(r => setTimeout(r, 20))
+  expect(await textOf(await band($))).toContain('40%')
 })
 
 test('the resting row shows the limits as bars, from the session usage', async ($, on) => {

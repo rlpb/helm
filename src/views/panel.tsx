@@ -2,7 +2,7 @@
 // holds `$`: every effect arrives as a plain function in `act`, built in hooks/register.tsx.
 
 import { tally } from '../catalog'
-import { COLOR, wrap } from '../graph'
+import { COLOR, glow } from '../graph'
 import { ITEMS } from '../github'
 import { LANGS, t } from '../i18n'
 import type { Key, Lang } from '../i18n'
@@ -13,7 +13,6 @@ import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
   tab: (tab: Nav['tab']) => void
-  zoom: (cat: string) => void
   fold: (cat: string) => void
   foldAll: (cats: string[]) => void
   inspect: (key: string) => void
@@ -39,7 +38,7 @@ export type Act = {
   anyway: (scope: 'user' | 'local') => void
 }
 
-type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; map?: any; mapNote?: string; now: number; lang: Lang }
+type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; now: number; lang: Lang }
 
 const LEVEL = { ok: 'success', caution: 'warning', no: 'error' } as const
 const WHY: Record<string, Key> = {
@@ -68,7 +67,7 @@ export function ago(ms: number): string {
   return `${Math.round(s / 86400)}d`
 }
 
-export function Panel({ ui, c, n, github, act, terminal, width, map, mapNote, now, lang }: Props) {
+export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Props) {
   const { Box, Button, Input, Select, Text } = ui
   const T = (key: Key, ...vars: (string | number)[]) => t(lang, key, ...vars)
   const index = c.index ?? []
@@ -460,20 +459,65 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, mapNote, no
     </Box>
   )
 
-  // ---- Map: only the picture; what each dot is shows on hover, inside the picture ----
+  // ---- Map: one card per category, sized by how many tools it holds, each tool a dot ----
+  // Made of the panel's own elements, so it wraps and resizes with the window and is never cut or overlapped.
+  const recent = Object.entries(c.uses)
+    .filter(([key]) => index.some(x => x.key === key))
+    .sort((x, y) => y[1].last - x[1].last)
+  const mapCards = byCategory.map(r => {
+    const items = index.filter(x => x.category === r.category)
+    const minW = Math.min(Math.max(18, width - 4), Math.max(18, Math.round(12 + Math.sqrt(r.total) * 5)))
+    return (
+      <Box key={`m-${r.category}`} flexDirection="column" borderStyle="round" borderColor={hex(r.category)} paddingX={1} flexGrow={r.total} minWidth={minW}>
+        <Box justifyContent="space-between">
+          <Text bold color={hex(r.category)}>
+            {T(`cat.${r.category}` as Key)}
+          </Text>
+          <Text dimColor>{`${r.on}/${r.total}`}</Text>
+        </Box>
+        <Text>
+          {items.map(x => {
+            const lit = glow(c.used, x.key, now) > 0
+            return (
+              <Text key={x.key} color={lit ? '#ffffff' : x.on ? hex(r.category) : 'inactive'} bold={lit}>
+                {`${lit ? '◉' : x.on ? '●' : '○'} `}
+              </Text>
+            )
+          })}
+        </Text>
+      </Box>
+    )
+  })
   const mapTab = (
     <Box flexDirection="column">
-      <Box marginTop={1} justifyContent="space-between">
-        <Text dimColor>{T('map.hint')}</Text>
-        <Select
-          key="zoom"
-          value={n.zoom ?? 'all'}
-          options={[{ value: 'all', label: T('map.all') }, ...byCategory.map(r => ({ value: r.category, label: T(`cat.${r.category}` as Key) }))]}
-          onSelect={act.zoom}
-        />
+      <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={0} marginTop={1}>
+        {mapCards}
       </Box>
-      <Box marginTop={1}>{map}</Box>
-      {mapNote ? <Text dimColor>{mapNote}</Text> : null}
+      <Box marginTop={1} columnGap={2} flexDirection="row" flexWrap="wrap">
+        <Text dimColor>{`● ${T('map.on')}`}</Text>
+        <Text dimColor>{`○ ${T('map.off')}`}</Text>
+        <Text dimColor>{`◉ ${T('map.legend')}`}</Text>
+      </Box>
+      {recent.length > 0 &&
+        card(
+          'recent',
+          <Box flexDirection="column">
+            {title(T('map.recent'), '#6fd08c')}
+            <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
+              {recent.slice(0, 6).map(([key, u]) => {
+                const entry = index.find(x => x.key === key)!
+                return (
+                  <Box key={`rec-${key}`} columnGap={1}>
+                    <Text color={hex(entry.category)}>●</Text>
+                    <Text bold>{entry.name}</Text>
+                    <Text dimColor>{`×${u.n} · ${ago(now - u.last)}`}</Text>
+                  </Box>
+                )
+              })}
+            </Box>
+          </Box>,
+          '#6fd08c',
+        )}
     </Box>
   )
 

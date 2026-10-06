@@ -6,6 +6,18 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-06
+
+### Changed
+
+- **The Map is rebuilt from the panel's own elements.** The drawn wheel needed exact pixels and could not follow the window: dots overlapped, names were cut, a hover card ran off the edge. The Map is now one card per category, sized by how many tools it holds, each tool a dot: filled when on, a ring when off, a lit disc while Claude has just used it. The cards wrap and resize with the window, so nothing is cut or overlapped, and the same view serves the terminal and the desktop. Below it, the tools used most recently.
+- The old wheel (SVG and character grid) is no longer drawn in the panel; it remains only for the README picture (`scripts/map.mjs`).
+
+### Fixed
+
+- **The limit bars follow the session.** They were read when a turn ended, so during a long turn they lagged behind the figures the app shows (32% against 35%). They are now read again after every tool call, at every prompt and while the row redraws during a turn, at most once every three seconds, and the row is only redrawn when a figure moved.
+- **The security dot above the prompt turned grey forever** until a scan had finished, and a scan of 190 tools takes several minutes (the scanner needs about 8 seconds just to start). Each result now counts as soon as it arrives: the dot turns green, amber or red from the first result, shows `Security 12/190` while it runs, and a run that is cut short keeps what it found. Results are also saved every eight tools.
+
 ## [0.9.5] - 2026-10-06
 
 ### Changed
@@ -195,7 +207,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.5...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/rlpb/helm/compare/v0.9.5...v0.10.0
 [0.9.5]: https://github.com/rlpb/helm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/rlpb/helm/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/rlpb/helm/compare/v0.9.2...v0.9.3

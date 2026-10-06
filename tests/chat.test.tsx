@@ -51,7 +51,9 @@ for (const surface of ['terminal', 'desktop']) {
     const ui = await $.ui.mount({ plugin: 'helm', surface, component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
     await ui.press({ key: 'graph' })
     const drawn = JSON.stringify(await ui.drawn())
-    expect(drawn).toContain(surface === 'desktop' ? 'class=\\"h h0\\"' : 'Raster')
+    // One card per category, and a dot for every one of the 190 tools.
+    expect((drawn.match(/"key":"m-[a-z]+"/g) ?? []).length).toBeGreaterThanOrEqual(3)
+    expect((drawn.match(/[●○◉] /g) ?? []).length).toBeGreaterThanOrEqual(190)
     expect(JSON.stringify(await ui.drawn())).not.toContain('could not be drawn')
   })
 }

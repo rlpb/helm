@@ -64,7 +64,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
   // The security dot: green when the last scan was clean, amber for cautions, red for a "do not install", dim when nothing was scanned yet.
   const found = flagged(c.scans)
   const scanned = Object.keys(c.scans).length > 0
-  const shield = !scanned ? 'inactive' : found.length > 0 ? 'error' : watched(c.scans) > 0 ? 'warning' : 'success'
+  const shield = c.scanning ? 'suggestion' : !scanned ? 'inactive' : found.length > 0 ? 'error' : watched(c.scans) > 0 ? 'warning' : 'success'
   const dot = litCat ? `#${(COLOR[litCat] ?? COLOR.other).toString(16).padStart(6, '0')}` : '#6fd08c'
 
   return (
@@ -77,7 +77,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
         {meters.map(m => Meter({ ui, terminal, id: m.id, label: m.label, pct: m.pct }))}
         <Box>
           <Text color={shield}>●</Text>
-          <Button key="helm-security" label={found.length > 0 ? `${t(lang, 'sec.title')} ${found.length}` : t(lang, 'sec.title')} plain onPress={act.security} />
+          <Button key="helm-security" label={c.scanning ? `${t(lang, 'sec.title')} ${c.scanning.done}/${c.scanning.total}` : found.length > 0 ? `${t(lang, 'sec.title')} ${found.length}` : t(lang, 'sec.title')} plain onPress={act.security} />
         </Box>
         {litName && <Text color={dot}>{`●  ${litName}`}</Text>}
       </Box>
