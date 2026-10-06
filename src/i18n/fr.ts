@@ -144,4 +144,8 @@ export const fr: Dict = {
   'band.existing': '« {0} » est déjà en cours. Lire le dossier et suggérer des outils ?',
   'band.look': 'Lire',
   'msg.read': 'Dossier de {0} lu : {1}',
+  'g.tools': 'Outils et skills',
+  'g.expandAll': 'Tout déplier',
+  'g.collapseAll': 'Tout replier',
+  'g.status': 'État',
 }

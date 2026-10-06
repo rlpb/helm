@@ -144,4 +144,8 @@ export const ko: Dict = {
   'band.existing': '“{0}”은(는) 이미 진행 중입니다. 폴더를 읽고 도구를 제안할까요?',
   'band.look': '읽기',
   'msg.read': '{0}의 폴더를 읽었습니다: {1}',
+  'g.tools': '도구와 스킬',
+  'g.expandAll': '모두 펼치기',
+  'g.collapseAll': '모두 접기',
+  'g.status': '상태',
 }

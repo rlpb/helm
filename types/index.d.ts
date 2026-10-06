@@ -108,7 +108,8 @@ export type Core = {
   ask: Ask | null
 }
 
-export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null }
+/** `open` holds the category ids unfolded in Global. */
+export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null; open: string[] }
 
 declare module 'claude-code' {
   interface PluginState {

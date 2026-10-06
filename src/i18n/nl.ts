@@ -144,4 +144,8 @@ export const nl: Dict = {
   'band.existing': '“{0}” is al bezig. De map lezen en tools voorstellen?',
   'band.look': 'Lezen',
   'msg.read': 'Map van {0} gelezen: {1}',
+  'g.tools': 'Tools en skills',
+  'g.expandAll': 'Alles uitklappen',
+  'g.collapseAll': 'Alles inklappen',
+  'g.status': 'Status',
 }

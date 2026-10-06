@@ -144,4 +144,8 @@ export const es: Dict = {
   'band.existing': '«{0}» ya está en marcha. ¿Leo la carpeta y sugiero herramientas?',
   'band.look': 'Leer',
   'msg.read': 'Leída la carpeta de {0}: {1}',
+  'g.tools': 'Herramientas y skills',
+  'g.expandAll': 'Expandir todo',
+  'g.collapseAll': 'Contraer todo',
+  'g.status': 'Estado',
 }

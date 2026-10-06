@@ -5,8 +5,8 @@
 
 import type { Entry } from '../types'
 
-export const W = 640
-export const H = 400
+export const W = 760
+export const H = 460
 /** How long a used tool glows, in milliseconds. */
 export const GLOW_MS = 6000
 
@@ -77,30 +77,52 @@ export type Opts = {
 }
 
 export function svg(lay: Layout, used: Record<string, number>, now: number, opts: Opts = {}): string {
+  const BG = '#12141a'
   const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`]
-  out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="7" fill="#e6e9ef"/>`)
-  for (const e of lay.edges) out.push(`<line x1="${e.from[0].toFixed(1)}" y1="${e.from[1].toFixed(1)}" x2="${e.to[0].toFixed(1)}" y2="${e.to[1].toFixed(1)}" stroke="${hex(color(e.cat))}" stroke-opacity="0.25"/>`)
+  out.push(`<rect width="${W}" height="${H}" rx="18" fill="${BG}"/>`)
+  for (const r of [90, 170, 250]) out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="${r}" fill="none" stroke="#ffffff" stroke-opacity="0.045"/>`)
+  const total = new Map<string, { n: number; on: number }>()
+  for (const n of lay.nodes) if (!n.hub) total.set(n.cat, { n: (total.get(n.cat)?.n ?? 0) + 1, on: (total.get(n.cat)?.on ?? 0) + (n.on ? 1 : 0) })
+  for (const e of lay.edges) {
+    const mx = (e.from[0] + e.to[0]) / 2
+    const my = (e.from[1] + e.to[1]) / 2
+    // A gentle bend, always to the same side, so the spokes read as a wheel.
+    const bx = mx - (e.to[1] - e.from[1]) * 0.12
+    const by = my + (e.to[0] - e.from[0]) * 0.12
+    out.push(`<path d="M${e.from[0].toFixed(1)} ${e.from[1].toFixed(1)} Q${bx.toFixed(1)} ${by.toFixed(1)} ${e.to[0].toFixed(1)} ${e.to[1].toFixed(1)}" fill="none" stroke="${hex(color(e.cat))}" stroke-opacity="0.32" stroke-width="1.5"/>`)
+  }
+  out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="16" fill="#1d2028" stroke="#e6e9ef" stroke-opacity="0.8" stroke-width="2"/><circle cx="${W / 2}" cy="${H / 2}" r="5" fill="#e6e9ef"/>`)
   for (const n of lay.nodes) {
     const c = hex(color(n.cat))
     const x = n.x.toFixed(1)
     const y = n.y.toFixed(1)
     if (n.hub) {
-      out.push(`<circle cx="${x}" cy="${y}" r="9" fill="${c}"/><text x="${x}" y="${(n.y + (n.reach ?? 24) + 16).toFixed(1)}" fill="${c}" font-size="12" text-anchor="middle" font-family="sans-serif">${esc(opts.label ? opts.label(n.cat) : n.label)}</text>`)
+      const reach = n.reach ?? 24
+      const count = total.get(n.cat)
+      out.push(
+        `<circle cx="${x}" cy="${y}" r="${reach + 8}" fill="${c}" fill-opacity="0.07"/>` +
+          `<circle cx="${x}" cy="${y}" r="12" fill="${c}"/><circle cx="${x}" cy="${y}" r="4" fill="${BG}"/>` +
+          `<text x="${x}" y="${(n.y + reach + 24).toFixed(1)}" fill="${c}" font-size="13" font-weight="bold" text-anchor="middle" font-family="sans-serif">${esc(opts.label ? opts.label(n.cat) : n.label)}</text>` +
+          `<text x="${x}" y="${(n.y + reach + 40).toFixed(1)}" fill="#9aa3b2" font-size="11" text-anchor="middle" font-family="sans-serif">${count ? `${count.on}/${count.n}` : ''}</text>`,
+      )
       continue
     }
     const lit = glow(used, n.key, now)
-    const base = n.on ? 0.75 : 0.25
     const named = lit > 0 || (opts.uses?.[n.key] ?? 0) > 0
-    if (named) out.push(`<text x="${(n.x + 9).toFixed(1)}" y="${(n.y + 4).toFixed(1)}" fill="${c}" font-size="10" font-family="sans-serif">${esc(n.label)}</text>`)
+    // A tool that is on is a filled dot, one that is off a hollow ring.
+    const dot = (r: number, inner: string) =>
+      n.on
+        ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" fill-opacity="0.9">${inner}</circle>`
+        : `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-opacity="0.5" stroke-width="1.3">${inner}</circle>`
+    if (named) out.push(`<text x="${(n.x + 10).toFixed(1)}" y="${(n.y + 4).toFixed(1)}" fill="#e6e9ef" font-size="11" font-family="sans-serif" stroke="${BG}" stroke-width="3" paint-order="stroke">${esc(n.label)}</text>`)
     if (lit > 0) {
       const left = Math.round(lit * GLOW_MS)
       out.push(
-        `<circle cx="${x}" cy="${y}" r="5" fill="${c}" fill-opacity="${base}"><title>${esc(n.label)}</title>` +
-          `<animate attributeName="r" values="11;5" dur="${left}ms" fill="freeze"/>` +
-          `<animate attributeName="fill-opacity" values="1;${base}" dur="${left}ms" fill="freeze"/></circle>`,
+        `<circle cx="${x}" cy="${y}" r="9" fill="${c}" fill-opacity="0.22"><animate attributeName="r" values="22;9" dur="${left}ms" fill="freeze"/><animate attributeName="fill-opacity" values="0.5;0" dur="${left}ms" fill="freeze"/></circle>` +
+          dot(5.5, `<title>${esc(n.label)}</title>`),
       )
     } else {
-      out.push(`<circle cx="${x}" cy="${y}" r="4" fill="${c}" fill-opacity="${base}"><title>${esc(n.label)}</title></circle>`)
+      out.push(dot(named ? 5 : 4, `<title>${esc(n.label)}</title>`))
     }
   }
   out.push('</svg>')

@@ -144,4 +144,8 @@ export const pt: Dict = {
   'band.existing': '“{0}” já está em andamento. Ler a pasta e sugerir ferramentas?',
   'band.look': 'Ler',
   'msg.read': 'Pasta de {0} lida: {1}',
+  'g.tools': 'Ferramentas e skills',
+  'g.expandAll': 'Expandir tudo',
+  'g.collapseAll': 'Recolher tudo',
+  'g.status': 'Estado',
 }

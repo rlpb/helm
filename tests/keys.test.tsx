@@ -39,7 +39,6 @@ for (const surface of ['terminal', 'desktop']) {
     await ui.press({ key: 'gh' })
     await ui.input({ key: 'ask', text: 'a report with citations and a website sitemap' })
     await check('setup with picks and GitHub')
-    await ui.press({ key: 'sub-discover' })
     await ui.input({ key: 'research', text: 'demo/tool' })
     await check('discover with a verdict')
     await ui.press({ key: 'global' })

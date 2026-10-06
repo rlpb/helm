@@ -51,7 +51,7 @@ const core = atom(
     ask: null,
   } as Core,
 )
-const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null } as Nav)
+const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null, open: [] } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
 const undoKey = (key: string) => `undo:${key}`
@@ -589,7 +589,8 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
-      sub: (sub: Nav['sub']) => void update($, nav, s => ({ ...s, sub })),
+      fold: (cat: string) => void update($, nav, s => ({ ...s, open: s.open.includes(cat) ? s.open.filter(x => x !== cat) : [...s.open, cat] })),
+      foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: s.open.length > 0 ? [] : cats })),
       inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: key })),
       lang: (pref: string) => void setLang($, pref),
       ask: (text: string) => void update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } })),

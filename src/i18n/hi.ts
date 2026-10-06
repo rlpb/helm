@@ -144,4 +144,8 @@ export const hi: Dict = {
   'band.existing': '“{0}” पहले से चल रहा है। फ़ोल्डर पढ़कर टूल सुझाएँ?',
   'band.look': 'पढ़ें',
   'msg.read': '{0} का फ़ोल्डर पढ़ा: {1}',
+  'g.tools': 'टूल और स्किल',
+  'g.expandAll': 'सब खोलें',
+  'g.collapseAll': 'सब समेटें',
+  'g.status': 'स्थिति',
 }

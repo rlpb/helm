@@ -28,9 +28,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
     // A chat already under way is joined, not set up from zero: Helm reads the folder and proposes tools.
     return (
       <Box columnGap={1}>
-        <Text bold color="claude">
-          Helm
-        </Text>
+        <Text bold color="claude">⎈</Text>
         <Text dimColor>{t(lang, c.chat ? 'band.existing' : 'band.new', c.project.name)}</Text>
         {c.chat ? (
           <Button key="look" label={t(lang, 'band.look')} variant="primary" onPress={act.look} />
@@ -45,9 +43,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
   if (hinted && c.project) {
     return (
       <Box columnGap={1}>
-        <Text bold color="claude">
-          Helm
-        </Text>
+        <Text bold color="claude">⎈</Text>
         <Text dimColor>{t(lang, 'hint.fits', hinted.name)}</Text>
         <Button key="hint-session" label={t(lang, 'hint.session')} variant="primary" onPress={() => act.accept(hinted.key, 'session')} />
         <Button key="hint-project" label={t(lang, 'hint.project')} onPress={() => act.accept(hinted.key, 'project')} />
@@ -75,10 +71,8 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
     <Box justifyContent="space-between">
       <Box columnGap={2}>
         <Box columnGap={1}>
-          <Text bold color="claude">
-            Helm
-          </Text>
-          <Text dimColor>{c.project ? `›  ${c.project.name}  ·  ${active}/${index.length}` : `›  ${t(lang, 'head.none')}`}</Text>
+          <Text bold color="claude">⎈</Text>
+          <Text dimColor>{c.project ? `${c.project.name}  ·  ${active}/${index.length}` : t(lang, 'head.none')}</Text>
         </Box>
         {meters.map(m => Meter({ ui, terminal, id: m.id, label: m.label, pct: m.pct }))}
         <Box>

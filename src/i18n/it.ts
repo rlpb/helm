@@ -144,4 +144,8 @@ export const it: Dict = {
   'band.existing': '“{0}” è già avviato. Leggo la cartella e propongo gli strumenti?',
   'band.look': 'Leggi',
   'msg.read': 'Letta la cartella di {0}: {1}',
+  'g.tools': 'Strumenti e skill',
+  'g.expandAll': 'Espandi tutto',
+  'g.collapseAll': 'Comprimi tutto',
+  'g.status': 'Stato',
 }

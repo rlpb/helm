@@ -6,6 +6,15 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-06
+
+### Changed
+
+- **A calmer, clearer panel.** The panel no longer says Helm in its own header: the window already does. The row above the prompt starts with a small helm mark and the project.
+- **Project** is one page: describe, shortlist, GitHub baseline and the search box stacked, no Setup / Discover switch.
+- **Global** starts with the search for a new tool, then a **Status** section (Health, Updates and Security side by side with one verdict on top), what you use most, and every tool and skill below, folded by category. Each category opens to its whole list, and one button opens or closes them all.
+- **Map** is drawn on its own dark card with curved spokes, a count per category, filled dots for tools that are on and rings for those that are off, and the names of what Claude used. It no longer shows on a white sheet.
+
 ## [0.7.3] - 2026-10-06
 
 ### Fixed
@@ -122,7 +131,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/rlpb/helm/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/rlpb/helm/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlpb/helm/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlpb/helm/compare/v0.7.0...v0.7.1

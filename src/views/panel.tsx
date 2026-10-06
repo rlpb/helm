@@ -13,7 +13,8 @@ import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
   tab: (tab: Nav['tab']) => void
-  sub: (sub: Nav['sub']) => void
+  fold: (cat: string) => void
+  foldAll: (cats: string[]) => void
   inspect: (key: string) => void
   lang: (pref: string) => void
   ask: (text: string) => void
@@ -85,17 +86,11 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     </Box>
   )
   const tab = (id: Nav['tab'], label: string) => <Button key={id} label={label} variant={n.tab === id ? 'primary' : 'secondary'} onPress={() => act.tab(id)} />
-  const sub = (id: Nav['sub'], label: string) => <Button key={`sub-${id}`} label={`${n.sub === id ? '●' : '○'} ${label}`} plain onPress={() => act.sub(id)} />
 
   const header = (
     <Box flexDirection="column">
       <Box justifyContent="space-between">
-        <Box columnGap={1}>
-          <Text bold color="claude">
-            Helm
-          </Text>
-          <Text dimColor>{c.project ? c.project.name : T('head.none')}</Text>
-        </Box>
+        <Text bold>{c.project ? c.project.name : T('head.none')}</Text>
         <Text dimColor>{c.index === null ? T('head.reading') : T('head.counts', index.length, active)}</Text>
       </Box>
       <Box marginTop={1} columnGap={1}>
@@ -258,13 +253,8 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
 
   const projectTab = (
     <Box flexDirection="column">
-      {here ? (
-        <Box marginTop={1} columnGap={2}>
-          {sub('setup', T('sub.setup'))}
-          {sub('discover', T('sub.discover'))}
-        </Box>
-      ) : null}
-      {here && n.sub === 'setup' ? setup : discover}
+      {here && setup}
+      {discover}
     </Box>
   )
 
@@ -277,135 +267,167 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     .slice(0, 5)
   const flaggedList = flagged(c.scans)
   const never = index.filter(x => !c.uses[x.key]?.n).length
-  const tw = Math.max(26, Math.floor((width - 1) / 2))
+  const attention = (report?.length ?? 0) + flaggedList.length
+  const measured = report !== null || Object.keys(c.scans).length > 0
+  const overall = !measured ? 'subtle' : flaggedList.length > 0 ? '#ff7a6b' : attention > 0 ? '#f2b84b' : '#6fd08c'
+  const tw = Math.max(22, Math.floor((width - 7) / 3))
   const tile = (key: string, color: string, children: any) => (
     <Box key={`tile-${key}`} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} width={tw}>
       {children}
     </Box>
   )
-  const tiles = (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={1} marginTop={1}>
-      {tile(
-        'health',
-        report && report.length > 0 ? '#f2b84b' : '#6fd08c',
-        <Box flexDirection="column">
-          {title(T('g.health'), report && report.length > 0 ? '#f2b84b' : '#6fd08c')}
-          {report === null ? <Text dimColor>·</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
-          {(report ?? []).map(i => (
-            <Box key={`issue-${i.key}${i.kind}`} flexDirection="column" marginTop={1}>
-              <Text>{issueText(i)}</Text>
-              {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? T('g.again') : T('g.remove')} onPress={() => act.fix(i.key)} />}
-            </Box>
-          ))}
-          <Box marginTop={1}>
-            <Button key="check" label={T('g.tidy')} variant="primary" onPress={act.check} />
-          </Box>
-        </Box>,
-      )}
-      {tile(
-        'updates',
-        '#5aa9ff',
-        <Box flexDirection="column">
-          {title(T('g.updates'), '#5aa9ff')}
-          <Text dimColor>{T('g.updatesText')}</Text>
-          <Box marginTop={1}>
-            <Button key="update" label={T('g.update')} onPress={act.update} />
-          </Box>
-        </Box>,
-      )}
-      {tile(
-        'security',
-        flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c',
-        <Box flexDirection="column">
-          {title(T('sec.title'), flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c')}
-          {c.scanner.state === 'missing' && <Text dimColor>{T('sec.missing')}</Text>}
-          {c.scanner.state === 'ready' && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
-          {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done + 1, c.scanning.total)}</Text>}
-          {!c.scanning && c.scanner.state === 'ready' && Object.keys(c.scans).length > 0 && flaggedList.length === 0 && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
-          {flaggedList.length > 0 && <Text color="error" bold>{`▲ ${T('sec.flagged', flaggedList.length)}`}</Text>}
-          {flaggedList.slice(0, 4).map(([key, s]) => {
-            const entry = index.find(x => x.key === key)
-            return (
-              <Box key={`row-${key}`} flexDirection="column" marginTop={1}>
-                <Text>{`${entry?.name ?? key} · ${s.score}/100`}</Text>
-                <Text dimColor wrap="truncate-end">{s.top[0] ? `${s.top[0].pattern} · ${s.top[0].where}` : s.recommendation}</Text>
-                {entry && <Button key={`sw-${key}`} label={entry.on ? T('sec.off') : T('sec.on')} onPress={() => act.toggle(key)} />}
-              </Box>
-            )
-          })}
-          <Box marginTop={1}>
-            {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} variant="primary" onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} variant="primary" onPress={act.installScanner} />}
-          </Box>
-        </Box>,
-      )}
-      {tile(
-        'usage',
-        '#b28cff',
-        <Box flexDirection="column">
-          {title(T('g.usage'), '#b28cff')}
-          {used.length === 0 && <Text dimColor>{T('g.nothingUsed')}</Text>}
-          {used.map(([key, u]) => {
-            const entry = index.find(x => x.key === key)!
-            return (
-              <Box key={key} columnGap={1}>
-                <Text color={hex(entry.category)}>●</Text>
-                <Text bold>{entry.name}</Text>
-                <Text dimColor>{`×${u.n} · ${ago(now - u.last)}`}</Text>
-              </Box>
-            )
-          })}
-          {index.length > 0 && <Text dimColor>{T('g.never', never)}</Text>}
-        </Box>,
-      )}
-      {c.candidates.length > 0 &&
-        tile(
-          'promote',
-          '#f2b84b',
+
+  // The status section: health, updates and security side by side in one card, with the verdict on top.
+  const status = card(
+    'status',
+    <Box flexDirection="column">
+      <Box justifyContent="space-between">
+        {title(T('g.status'), overall)}
+        {measured ? (
+          <Text bold color={attention > 0 ? 'warning' : 'success'}>
+            {attention > 0 ? `▲ ${T('g.todo', attention)}` : `✓ ${T('g.good')}`}
+          </Text>
+        ) : (
+          <Text dimColor>·</Text>
+        )}
+      </Box>
+      <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={1} marginTop={1}>
+        {tile(
+          'health',
+          report && report.length > 0 ? '#f2b84b' : '#6fd08c',
           <Box flexDirection="column">
-            {title(T('g.promote'), '#f2b84b')}
-            {c.candidates.map(repo => (
-              <Box key={`cand-${repo}`} columnGap={1}>
-                <Text>{repo}</Text>
-                <Button key={`g-${repo}`} label={T('g.installAll')} onPress={() => act.makeGlobal(repo)} />
+            {title(T('g.health'), report && report.length > 0 ? '#f2b84b' : '#6fd08c')}
+            {report === null ? <Text dimColor>·</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
+            {(report ?? []).map(i => (
+              <Box key={`issue-${i.key}${i.kind}`} flexDirection="column" marginTop={1}>
+                <Text>{issueText(i)}</Text>
+                {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? T('g.again') : T('g.remove')} onPress={() => act.fix(i.key)} />}
               </Box>
             ))}
+            <Box marginTop={1}>
+              <Button key="check" label={T('g.tidy')} variant="primary" onPress={act.check} />
+            </Box>
           </Box>,
         )}
-    </Box>
+        {tile(
+          'updates',
+          '#5aa9ff',
+          <Box flexDirection="column">
+            {title(T('g.updates'), '#5aa9ff')}
+            <Text dimColor>{T('g.updatesText')}</Text>
+            <Box marginTop={1}>
+              <Button key="update" label={T('g.update')} variant="primary" onPress={act.update} />
+            </Box>
+          </Box>,
+        )}
+        {tile(
+          'security',
+          flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c',
+          <Box flexDirection="column">
+            {title(T('sec.title'), flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c')}
+            {c.scanner.state === 'missing' && <Text dimColor>{T('sec.missing')}</Text>}
+            {c.scanner.state === 'ready' && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
+            {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done + 1, c.scanning.total)}</Text>}
+            {!c.scanning && c.scanner.state === 'ready' && Object.keys(c.scans).length > 0 && flaggedList.length === 0 && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
+            {flaggedList.length > 0 && <Text color="error" bold>{`▲ ${T('sec.flagged', flaggedList.length)}`}</Text>}
+            {flaggedList.slice(0, 4).map(([key, s]) => {
+              const entry = index.find(x => x.key === key)
+              return (
+                <Box key={`row-${key}`} flexDirection="column" marginTop={1}>
+                  <Text>{`${entry?.name ?? key} · ${s.score}/100`}</Text>
+                  <Text dimColor wrap="truncate-end">{s.top[0] ? `${s.top[0].pattern} · ${s.top[0].where}` : s.recommendation}</Text>
+                  {entry && <Button key={`sw-${key}`} label={entry.on ? T('sec.off') : T('sec.on')} onPress={() => act.toggle(key)} />}
+                </Box>
+              )
+            })}
+            <Box marginTop={1}>
+              {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} variant="primary" onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} variant="primary" onPress={act.installScanner} />}
+            </Box>
+          </Box>,
+        )}
+      </Box>
+    </Box>,
+    overall,
   )
 
+  // What Claude reaches for most, and what was added for one project.
+  const habits =
+    used.length > 0 || c.candidates.length > 0
+      ? card(
+          'habits',
+          <Box flexDirection="column">
+            {title(T('g.usage'), '#b28cff')}
+            {used.length === 0 && <Text dimColor>{T('g.nothingUsed')}</Text>}
+            <Box flexDirection="row" flexWrap="wrap" columnGap={3}>
+              {used.map(([key, u]) => {
+                const entry = index.find(x => x.key === key)!
+                return (
+                  <Box key={`use-${key}`} columnGap={1}>
+                    <Text color={hex(entry.category)}>●</Text>
+                    <Text bold>{entry.name}</Text>
+                    <Text dimColor>{`×${u.n} · ${ago(now - u.last)}`}</Text>
+                  </Box>
+                )
+              })}
+            </Box>
+            {index.length > 0 && <Text dimColor>{T('g.never', never)}</Text>}
+            {c.candidates.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                {title(T('g.promote'), '#f2b84b')}
+                {c.candidates.map(repo => (
+                  <Box key={`cand-${repo}`} columnGap={1}>
+                    <Text>{repo}</Text>
+                    <Button key={`g-${repo}`} label={T('g.installAll')} onPress={() => act.makeGlobal(repo)} />
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>,
+          '#b28cff',
+        )
+      : null
+
+  // Every tool and skill, folded by category; each category opens to the whole list.
   const byCategory = tally(index)
-  const categories = (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={1} marginTop={1}>
+  const tools = card(
+    'tools',
+    <Box flexDirection="column">
+      <Box justifyContent="space-between">
+        {title(`${T('g.tools')}  ·  ${index.length}`, '#5aa9ff')}
+        <Button key="fold-all" label={n.open.length > 0 ? T('g.collapseAll') : T('g.expandAll')} plain onPress={() => act.foldAll(byCategory.map(r => r.category))} />
+      </Box>
       {byCategory.map(r => {
         const items = index.filter(x => x.category === r.category)
-        const shown = items.slice(0, 6)
-        return tile(
-          `cat-${r.category}`,
-          hex(r.category),
-          <Box flexDirection="column">
+        const isOpen = n.open.includes(r.category)
+        return (
+          <Box key={`cat-${r.category}`} flexDirection="column" marginTop={1}>
             <Box columnGap={1}>
-              <Text color={hex(r.category)} bold>
-                {`● ${T(`cat.${r.category}` as Key)}`}
-              </Text>
+              <Text color={hex(r.category)}>●</Text>
+              <Button key={`fold-${r.category}`} label={`${isOpen ? '▾' : '▸'} ${T(`cat.${r.category}` as Key)}`} plain onPress={() => act.fold(r.category)} />
               <Text dimColor>{`${r.on}/${r.total}`}</Text>
             </Box>
-            {shown.map(x => (
-              <Text key={x.key} dimColor={!x.on} wrap="truncate-end">
-                {`${x.on ? '●' : '○'} ${x.name}`}
-              </Text>
-            ))}
-            {items.length > shown.length && <Text dimColor>{`+${items.length - shown.length}`}</Text>}
-          </Box>,
+            {isOpen && (
+              <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={3}>
+                {items.map(x => (
+                  <Text key={x.key} color={x.on ? hex(r.category) : 'inactive'}>
+                    {`${x.on ? '●' : '○'} ${x.name}`}
+                  </Text>
+                ))}
+              </Box>
+            )}
+          </Box>
         )
       })}
-    </Box>
+    </Box>,
+    '#5aa9ff',
   )
+
   const globalTab = (
     <Box flexDirection="column">
-      {tiles}
-      {categories}
       {discover}
+      {status}
+      {habits}
+      {tools}
     </Box>
   )
 

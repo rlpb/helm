@@ -144,4 +144,8 @@ export const pl: Dict = {
   'band.existing': '„{0}” już trwa. Przeczytać folder i zaproponować narzędzia?',
   'band.look': 'Przeczytaj',
   'msg.read': 'Odczytano folder {0}: {1}',
+  'g.tools': 'Narzędzia i skille',
+  'g.expandAll': 'Rozwiń wszystko',
+  'g.collapseAll': 'Zwiń wszystko',
+  'g.status': 'Stan',
 }

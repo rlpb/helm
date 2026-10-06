@@ -22,13 +22,13 @@ const PLUGINS = {
   'diagrams@community': 'Draw architecture diagrams and visual flows',
 }
 
-type Shot = { name: string; band?: boolean; open?: boolean; tab?: string; sub?: string; ask?: string; github?: boolean; research?: string; tidy?: boolean; scan?: boolean }
+type Shot = { name: string; band?: boolean; open?: boolean; tab?: string; sub?: string; fold?: string[]; ask?: string; github?: boolean; research?: string; tidy?: boolean; scan?: boolean }
 const SHOTS: Shot[] = [
   { name: 'band', band: true },
   { name: 'rest', band: true, open: true },
   { name: 'project', ask: 'a report with charts and citations', github: true },
-  { name: 'research', sub: 'sub-discover', research: 'https://github.com/example/citation-tools' },
-  { name: 'global', tab: 'global', tidy: true, scan: true },
+  { name: 'research', research: 'https://github.com/example/citation-tools' },
+  { name: 'global', tab: 'global', tidy: true, scan: true, fold: ['fold-build', 'fold-write'] },
   { name: 'map', tab: 'graph' },
 ]
 
@@ -83,6 +83,7 @@ for (const shot of SHOTS) {
     if (shot.research) await ui.input({ key: 'research', text: shot.research })
     if (shot.tidy) await ui.press({ key: 'check' })
     if (shot.scan) await ui.press({ key: 'scan' })
+    for (const key of shot.fold ?? []) await ui.press({ key })
     console.log(`HELM-SHOT ${shot.name} ${JSON.stringify({ columns: 76, tree: await ui.drawn() })}`)
   })
 }

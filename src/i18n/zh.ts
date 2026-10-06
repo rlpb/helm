@@ -144,4 +144,8 @@ export const zh: Dict = {
   'band.existing': '“{0}”已在进行中。读取文件夹并推荐工具吗？',
   'band.look': '读取',
   'msg.read': '已读取 {0} 的文件夹：{1}',
+  'g.tools': '工具和技能',
+  'g.expandAll': '全部展开',
+  'g.collapseAll': '全部收起',
+  'g.status': '状态',
 }

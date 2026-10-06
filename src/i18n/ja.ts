@@ -144,4 +144,8 @@ export const ja: Dict = {
   'band.existing': '「{0}」はすでに進行中です。フォルダーを読んでツールを提案しますか？',
   'band.look': '読む',
   'msg.read': '{0} のフォルダーを読みました: {1}',
+  'g.tools': 'ツールとスキル',
+  'g.expandAll': 'すべて展開',
+  'g.collapseAll': 'すべて折りたたむ',
+  'g.status': '状態',
 }

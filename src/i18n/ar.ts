@@ -144,4 +144,8 @@ export const ar: Dict = {
   'band.existing': '«{0}» قيد العمل بالفعل. أقرأ المجلد وأقترح أدوات؟',
   'band.look': 'اقرأ',
   'msg.read': 'قُرئ مجلد {0}: {1}',
+  'g.tools': 'الأدوات والمهارات',
+  'g.expandAll': 'توسيع الكل',
+  'g.collapseAll': 'طيّ الكل',
+  'g.status': 'الحالة',
 }

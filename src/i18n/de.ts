@@ -144,4 +144,8 @@ export const de: Dict = {
   'band.existing': '„{0}“ läuft schon. Ordner lesen und Werkzeuge vorschlagen?',
   'band.look': 'Lesen',
   'msg.read': 'Ordner von {0} gelesen: {1}',
+  'g.tools': 'Werkzeuge und Skills',
+  'g.expandAll': 'Alles aufklappen',
+  'g.collapseAll': 'Alles zuklappen',
+  'g.status': 'Zustand',
 }

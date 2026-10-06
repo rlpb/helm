@@ -146,6 +146,10 @@ export const en = {
   'band.existing': '“{0}” is already under way. Read the folder and suggest tools?',
   'band.look': 'Read it',
   'msg.read': 'Read the folder of {0}: {1}',
+  'g.tools': 'Tools and skills',
+  'g.expandAll': 'Expand all',
+  'g.collapseAll': 'Collapse all',
+  'g.status': 'Status',
 }
 
 export type Dict = typeof en

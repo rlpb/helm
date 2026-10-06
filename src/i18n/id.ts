@@ -144,4 +144,8 @@ export const id: Dict = {
   'band.existing': '“{0}” sudah berjalan. Baca folder dan sarankan alat?',
   'band.look': 'Baca',
   'msg.read': 'Folder {0} dibaca: {1}',
+  'g.tools': 'Alat dan skill',
+  'g.expandAll': 'Buka semua',
+  'g.collapseAll': 'Tutup semua',
+  'g.status': 'Status',
 }

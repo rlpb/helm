@@ -144,4 +144,8 @@ export const tr: Dict = {
   'band.existing': '“{0}” zaten sürüyor. Klasörü okuyup araç önerelim mi?',
   'band.look': 'Oku',
   'msg.read': '{0} klasörü okundu: {1}',
+  'g.tools': 'Araçlar ve skiller',
+  'g.expandAll': 'Hepsini aç',
+  'g.collapseAll': 'Hepsini kapat',
+  'g.status': 'Durum',
 }
