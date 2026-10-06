@@ -1,0 +1,7 @@
+# Type declarations Claude Code writes next to a mod (`/plugin-types`).
+.claude-plugin/types/
+
+# Scratch output.
+.shots/
+out/
+node_modules/

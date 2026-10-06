@@ -1,0 +1,100 @@
+// The index of everything installed: plugins and skills, each with a short description and a
+// category. It is the one list the rest of Helm reads: the shortlist for a project, the graph, and
+// the research box (to see what is already there). Pure: files in, entries out.
+
+import type { Entry } from '../types'
+
+export const CATEGORIES = ['build', 'write', 'research', 'design', 'web', 'data', 'security', 'docs', 'setup', 'other'] as const
+export type Category = (typeof CATEGORIES)[number]
+
+// A word that points at a category. A stem matches the start of a word, so "program" covers
+// "programming". The category with the most hits wins; on a tie the earlier one in CATEGORIES does.
+const STEMS: Record<Exclude<Category, 'other'>, string[]> = {
+  build: ['code', 'coding', 'debug', 'test', 'refactor', 'git', 'github', 'commit', 'typescript', 'javascript', 'python', 'rust', 'api', 'develop', 'program', 'tdd', 'lint', 'compil', 'script', 'function', 'repo', 'pull', 'engineer', 'software', 'react', 'node', 'backend', 'frontend', 'deploy', 'build'],
+  write: ['write', 'writing', 'edit', 'draft', 'prose', 'copy', 'tone', 'voice', 'humaniz', 'blog', 'essay', 'article', 'translat', 'grammar'],
+  research: ['research', 'paper', 'literature', 'cite', 'citation', 'scholar', 'science', 'scientific', 'hypothes', 'study', 'survey', 'analy', 'chem', 'medical', 'clinical'],
+  design: ['design', 'ui', 'ux', 'interface', 'brand', 'logo', 'layout', 'figma', 'palette', 'typograph', 'diagram', 'visual', 'illustrat', 'image', 'icon'],
+  web: ['seo', 'website', 'web', 'browser', 'scrap', 'crawl', 'ecommerce', 'marketing', 'campaign', 'newsletter', 'sitemap', 'ads', 'social'],
+  data: ['data', 'sql', 'database', 'dataset', 'csv', 'spreadsheet', 'excel', 'chart', 'plot', 'statistic', 'dataframe', 'pandas', 'machine', 'model', 'train'],
+  security: ['security', 'secure', 'vulnerab', 'exploit', 'malware', 'threat', 'forensic', 'pentest', 'penetration', 'owasp', 'cve', 'crypto', 'incident', 'compliance', 'audit'],
+  docs: ['doc', 'pdf', 'word', 'slide', 'presentation', 'pptx', 'docx', 'xlsx', 'report', 'readme', 'changelog', 'markdown', 'notes'],
+  setup: ['setup', 'config', 'configur', 'skill', 'plugin', 'memory', 'plan', 'workflow', 'organiz', 'session', 'agent', 'hook', 'claude'],
+}
+
+const words = (text: string): string[] => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
+
+/** The category a name and a description point at; `other` when nothing does. */
+export function categorize(name: string, description: string): Category {
+  const found = words(`${name} ${name} ${description}`)
+  let best: Category = 'other'
+  let top = 0
+  for (const id of CATEGORIES) {
+    if (id === 'other') continue
+    const score = STEMS[id].reduce((n, stem) => n + found.filter(w => w.startsWith(stem)).length, 0)
+    if (score > top) {
+      top = score
+      best = id
+    }
+  }
+  return best
+}
+
+/** `name` and `description` from the frontmatter of a SKILL.md, however it is quoted. */
+export function parseFrontmatter(raw: string): { name?: string; description?: string } {
+  const block = raw.match(/^---\s*\r?\n([\s\S]*?)\r?\n---/)
+  if (!block) return {}
+  const value = (key: string): string | undefined => {
+    const m = block[1].match(new RegExp(`^${key}:\\s*(.*)$`, 'm'))
+    if (!m) return undefined
+    const text = m[1].trim().replace(/^["']|["']$/g, '')
+    return text === '>' || text === '|' || text === '' ? undefined : text
+  }
+  return { name: value('name'), description: value('description') }
+}
+
+const brief = (text: string, max = 160): string => {
+  const one = text.replace(/\s+/g, ' ').trim()
+  return one.length <= max ? one : `${one.slice(0, max - 1).replace(/\s+\S*$/, '')}…`
+}
+
+/** The friendly name of an id: "claude-seo@community" is "Claude SEO". */
+export function friendly(raw: string): string {
+  const acronyms = new Set(['seo', 'ui', 'ux', 'ai', 'mcp', 'api', 'pdf', 'sql', 'css', 'html', 'ocr', 'llm', 'sdk', 'cli'])
+  return raw
+    .split('@')[0]
+    .split(/[-_.\s]+/)
+    .filter(Boolean)
+    .map((p, i) => (acronyms.has(p.toLowerCase()) ? p.toUpperCase() : i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p.toLowerCase()))
+    .join(' ')
+}
+
+export type Source = {
+  plugins: { id: string; description?: string; on: boolean }[]
+  skills: { name: string; description?: string; on: boolean }[]
+}
+
+/** Every installed plugin and own skill as one kind of row, plugins first, each group by name. */
+export function buildIndex(source: Source): Entry[] {
+  const plugin = (p: Source['plugins'][number]): Entry => {
+    const description = brief(p.description ?? '')
+    return { key: `plugin:${p.id}`, kind: 'plugin', name: friendly(p.id), description, category: categorize(p.id, description), on: p.on }
+  }
+  const skill = (s: Source['skills'][number]): Entry => {
+    const description = brief(s.description ?? '')
+    return { key: `skill:${s.name}`, kind: 'skill', name: friendly(s.name), description, category: categorize(s.name, description), on: s.on }
+  }
+  const byName = (a: Entry, b: Entry) => a.name.localeCompare(b.name)
+  return [...source.plugins.map(plugin).sort(byName), ...source.skills.map(skill).sort(byName)]
+}
+
+/** How many entries each category holds, biggest first, empty ones left out. */
+export function tally(entries: Entry[]): { category: string; total: number; on: number }[] {
+  const rows = new Map<string, { total: number; on: number }>()
+  for (const e of entries) {
+    const row = rows.get(e.category) ?? { total: 0, on: 0 }
+    row.total += 1
+    if (e.on) row.on += 1
+    rows.set(e.category, row)
+  }
+  return [...rows].map(([category, r]) => ({ category, ...r })).sort((a, b) => b.total - a.total || a.category.localeCompare(b.category))
+}

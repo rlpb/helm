@@ -1,0 +1,14 @@
+{
+  "name": "helm",
+  "version": "0.1.0",
+  "description": "The control panel for Claude Code: it sets up each project with the right skills and tools, shows what is in use, and vets new tools before you add them.",
+  "author": {
+    "name": "rlpb",
+    "url": "https://github.com/rlpb"
+  },
+  "homepage": "https://github.com/rlpb/helm",
+  "repository": "https://github.com/rlpb/helm",
+  "license": "Apache-2.0",
+  "keywords": ["mod", "dashboard", "skills", "plugins", "project", "setup"],
+  "types": "./types/index.d.ts"
+}
