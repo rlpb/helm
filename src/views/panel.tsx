@@ -39,7 +39,7 @@ export type Act = {
   anyway: (scope: 'user' | 'local') => void
 }
 
-type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; map?: any; now: number; lang: Lang }
+type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; map?: any; mapNote?: string; now: number; lang: Lang }
 
 const LEVEL = { ok: 'success', caution: 'warning', no: 'error' } as const
 const WHY: Record<string, Key> = {
@@ -68,7 +68,7 @@ export function ago(ms: number): string {
   return `${Math.round(s / 86400)}d`
 }
 
-export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }: Props) {
+export function Panel({ ui, c, n, github, act, terminal, width, map, mapNote, now, lang }: Props) {
   const { Box, Button, Input, Select, Text } = ui
   const T = (key: Key, ...vars: (string | number)[]) => t(lang, key, ...vars)
   const index = c.index ?? []
@@ -473,6 +473,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
         />
       </Box>
       <Box marginTop={1}>{map}</Box>
+      {mapNote ? <Text dimColor>{mapNote}</Text> : null}
     </Box>
   )
 

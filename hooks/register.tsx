@@ -674,12 +674,17 @@ export const register: Register = on => {
       toggle: (key: string) => void toggleTool($, key),
       anyway: (scope: 'user' | 'local') => void installAnyway($, scope),
     }
+    let mapNote = ''
     try {
       let map: any = null
       if (n.tab === 'graph') {
-        // The picture is as wide as the panel (a column is about 9 pixels), so it fills the window and follows it when it grows.
-        const pw = terminal ? 760 : Math.max(560, Math.min(1200, Math.round((e.props.bodyColumns ?? 80) * 9)))
-        const lay = layout(c.index ?? [], pw, Math.round(pw * 0.62))
+        // The picture follows the panel: as wide as it is (a column is about 8 pixels), and the shape changes with the width, so a narrow
+        // panel gets a taller, tighter arrangement instead of a shrunk wide one.
+        const cols = e.props.bodyColumns ?? 80
+        const pw = terminal ? 760 : Math.max(360, Math.min(1200, Math.round(cols * 8)))
+        const ratio = pw >= 900 ? 0.56 : pw >= 700 ? 0.62 : pw >= 560 ? 0.78 : 0.95
+        const lay = layout(c.index ?? [], pw, Math.round(pw * ratio))
+        mapNote = `${cols} cols · ${lay.w}×${lay.h}`
         const opts = {
           label: (cat: string) => t(c.lang, `cat.${cat}` as Key),
           uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])),
@@ -693,7 +698,7 @@ export const register: Register = on => {
           <ui.Svg source={svg(lay, c.used, now, { ...opts, zoom: n.zoom })} alt="Map of installed tools, lit when used" width={lay.w} height={lay.h} isInteractive />
         )
       }
-      return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
+      return Panel({ ui, c, n, github, act, terminal, width, map, mapNote, now, lang: c.lang })
     } catch (err) {
       // A panel that cannot draw says why, instead of the engine's empty "nothing to show".
       return (

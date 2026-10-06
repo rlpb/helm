@@ -6,6 +6,13 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-10-06
+
+### Changed
+
+- **The Map changes shape with the panel.** Wide panels get a wide arrangement, narrow ones a taller and tighter one with smaller dots, down to about 360 pixels, instead of one wide picture shrunk to fit. The width follows the panel's own measure (a column is taken as 8 pixels).
+- A small dim line under the map shows the measure it used (`cols · width×height`). If the map does not follow a resized panel, that line says whether the panel reported a new width or not.
+
 ## [0.9.4] - 2026-10-06
 
 ### Changed
@@ -188,7 +195,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.4...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.5...HEAD
+[0.9.5]: https://github.com/rlpb/helm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/rlpb/helm/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/rlpb/helm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/rlpb/helm/compare/v0.9.1...v0.9.2

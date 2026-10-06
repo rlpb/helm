@@ -47,7 +47,8 @@ export function layout(index: Entry[], w = W, h = H): Layout {
   const cx = w / 2
   const cy = h / 2
   // Sizes are real pixels: the picture is drawn 1:1 in the space the panel has, so type and dots keep their size.
-  const k = 1
+  // On a small canvas the dots and rings shrink a little so the clusters still fit side by side.
+  const k = Math.max(0.6, Math.min(1, Math.min(w, h * 1.4) / 720))
   const reachOf = (cat: string) => (20 + Math.floor(Math.sqrt((groups.get(cat)!.length - 1) / 4)) * 17) * k
   const room = cats.map(cat => Math.max(2 * reachOf(cat), 80 * k) + 22 * k)
   const sum = room.reduce((x, y) => x + y, 0)
