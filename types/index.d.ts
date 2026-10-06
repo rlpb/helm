@@ -30,7 +30,31 @@ export type Ask = { text: string; picks: string[] }
 
 export type Issue = { kind: string; key: string; text: string; fix?: string[] }
 
+/** What the repository page and its top-level files say about a tool. */
+export type Meta = {
+  repo: string
+  description: string
+  license: string | null
+  archived: boolean
+  pushedAt: string
+  stars: number
+  /** A plugin catalog found in the repo, if any. */
+  marketplace: { name: string; plugins: string[] } | null
+  /** The repo is one skill (SKILL.md at its root). */
+  isSkill: boolean
+}
+
+export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: string[] }
+
+/** A tool the person asked about: what it is and what Helm thinks. */
+export type Found = { meta: Meta; verdict: Verdict }
+export type Hit = { repo: string; description: string; stars: number }
+
 export type Core = {
+  found: Found | null
+  hits: Hit[] | null
+  /** Repos installed for one project, offered later as global installs. */
+  candidates: string[]
   /** Claude Code's config folder, slashes forward. */
   dir: string
   /** The last result worth telling, in one line. */

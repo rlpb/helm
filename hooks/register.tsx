@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Core, Nav, ProjectState } from '../types'
+import type { Core, Found, Hit, Meta, Nav, ProjectState } from '../types'
+import { installPlan, judge, parseTarget } from '../src/research'
 import { tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
 import { shortlist } from '../src/shortlist'
@@ -11,7 +12,7 @@ import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 
 const PANE = 'helm'
-const core = atom({ plugin: 'helm', key: 'core' } as const, { dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
+const core = atom({ plugin: 'helm', key: 'core' } as const, { found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -79,6 +80,90 @@ async function runUpdate($: any) {
   await say($, `Updated ${ok} of ${ids.length}. New versions load in the next chat.`)
 }
 
+const gh = ($: any, args: string[]) => $.process.run(['gh', ...args], { timeoutMs: 30_000 }).catch(() => ({ exitCode: -1, stdout: '', stderr: '' }))
+const RAW = ['-H', 'Accept: application/vnd.github.raw']
+
+/** Reads a repo the way a careful person would: its page, then whether it holds a plugin catalog or one skill. */
+async function inspect($: any, repo: string): Promise<Found | null> {
+  const page = await gh($, ['api', `repos/${repo}`])
+  if (page.exitCode !== 0) return null
+  const r = JSON.parse(page.stdout)
+  const cat = await gh($, ['api', ...RAW, `repos/${repo}/contents/.claude-plugin/marketplace.json`])
+  let marketplace: Meta['marketplace'] = null
+  if (cat.exitCode === 0) {
+    try {
+      const m = JSON.parse(cat.stdout)
+      const all: string[] = (m.plugins ?? []).map((p: any) => String(p.name))
+      const own = repo.split('/')[1]
+      // One plugin, or the one named like the repo: never a whole catalog at once.
+      const pick = all.length === 1 ? all : all.filter(n => n === own).slice(0, 1)
+      if (pick.length > 0) marketplace = { name: String(m.name), plugins: pick }
+    } catch {
+      // A catalog that is not JSON counts as no catalog.
+    }
+  }
+  const skill = marketplace ? { exitCode: 1 } : await gh($, ['api', ...RAW, `repos/${repo}/contents/SKILL.md`])
+  const meta: Meta = {
+    repo: r.full_name,
+    description: String(r.description ?? ''),
+    license: r.license?.spdx_id ?? null,
+    archived: r.archived === true,
+    pushedAt: String(r.pushed_at ?? ''),
+    stars: Number(r.stargazers_count ?? 0),
+    marketplace,
+    isSkill: skill.exitCode === 0,
+  }
+  return { meta, verdict: judge(meta, await $.clock.now()) }
+}
+
+async function research($: any, input: string) {
+  const target = parseTarget(input)
+  await update($, core, s => ({ ...s, found: null, hits: null, message: target.kind === 'none' ? 'Type a GitHub link, owner/name, or a name.' : 'Looking…' }))
+  if (target.kind === 'repo') {
+    const found = await inspect($, target.repo)
+    return void (await update($, core, s => ({ ...s, found, message: found ? null : 'Could not read that repository (is it public, and is gh signed in?).' })))
+  }
+  if (target.kind === 'search') {
+    const r = await gh($, ['search', 'repos', target.query, '--limit', '5', '--json', 'fullName,description,stargazersCount'])
+    let hits: Hit[] = []
+    try {
+      hits = JSON.parse(r.stdout).map((x: any) => ({ repo: x.fullName, description: String(x.description ?? ''), stars: Number(x.stargazersCount ?? 0) }))
+    } catch {
+      // No usable answer: no hits.
+    }
+    await update($, core, s => ({ ...s, hits, message: hits.length ? null : 'Nothing found.' }))
+  }
+}
+
+/** Installs after the person's yes. In a project the plugin is installed for that folder only, and remembered as a global candidate. */
+async function install($: any, scope: 'user' | 'local') {
+  const c = await read($, core)
+  if (!c.found || c.found.verdict.level === 'no') return
+  const plan = installPlan(c.found.meta, scope, `${c.dir}/skills`)
+  if (!plan) return say($, 'Helm does not know how to install that form.')
+  await say($, 'Installing…')
+  for (const argv of plan) {
+    const r = await $.process.run(argv, { timeoutMs: 180_000, ...(scope === 'local' && c.project ? { cwd: c.project.root } : {}) }).catch(() => ({ exitCode: -1 }))
+    if (r.exitCode !== 0) return say($, `Stopped at: ${argv.slice(0, 4).join(' ')}`)
+  }
+  const repo = c.found.meta.repo
+  const candidates = scope === 'local' ? [...new Set([...c.candidates, repo])] : c.candidates.filter(x => x !== repo)
+  await $.store.set('candidates', candidates)
+  await update($, core, s => ({ ...s, candidates, found: null, message: `Installed ${repo}${scope === 'local' ? ' for this project' : ''}. It loads in the next chat.` }))
+}
+
+async function pickHit($: any, repo: string) {
+  const found = await inspect($, repo)
+  await update($, core, s => ({ ...s, hits: null, found, message: found ? null : 'Could not read that repository.' }))
+}
+
+async function globalInstall($: any, repo: string) {
+  const found = await inspect($, repo)
+  if (!found) return say($, 'Could not read that repository.')
+  await update($, core, s => ({ ...s, found }))
+  await install($, 'user')
+}
+
 /** The only fix Helm runs: it needs the second press on the same issue. */
 async function fixIssue($: any, key: string) {
   const c = await read($, core)
@@ -107,7 +192,8 @@ export const register: Register = on => {
       settings,
     ).catch(() => [])
 
-    await update($, core, () => ({ dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
+    await update($, core, () => ({ found: null, hits: null, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
     return next(e)
   })
 
@@ -203,6 +289,48 @@ export const register: Register = on => {
             ))}
           </Box>
         )}
+        {n.tab === 'global' && c.candidates.length > 0 && (
+          <Box flexDirection="column">
+            <Text dimColor>Added for one project, make global?</Text>
+            {c.candidates.map(repo => (
+              <Box key={repo}>
+                <Text>{repo} </Text>
+                <Button key={`g-${repo}`} label="Install for all" onPress={() => globalInstall($, repo)} />
+              </Box>
+            ))}
+          </Box>
+        )}
+        {c.hits && (
+          <Box flexDirection="column">
+            {c.hits.map(h => (
+              <Box key={h.repo}>
+                <Button key={`h-${h.repo}`} label={h.repo} onPress={() => pickHit($, h.repo)} />
+                <Text dimColor> {h.stars}★ {h.description.slice(0, 60)}</Text>
+              </Box>
+            ))}
+          </Box>
+        )}
+        {c.found && (
+          <Box flexDirection="column">
+            <Text bold>
+              {c.found.meta.repo} <Text dimColor>{c.found.meta.license ?? 'no license'}, {c.found.meta.stars}★</Text>
+            </Text>
+            <Text>{c.found.verdict.level === 'ok' ? 'Looks fine.' : c.found.verdict.level === 'caution' ? 'Check before you install:' : 'Do not install:'}</Text>
+            {c.found.verdict.reasons.map(reason => (
+              <Text key={reason} dimColor>
+                · {reason}
+              </Text>
+            ))}
+            {c.found.verdict.level !== 'no' && (
+              <Button
+                key="install"
+                label={n.tab === 'project' && c.project ? 'Yes, install for this project' : 'Yes, install for all'}
+                onPress={() => install($, n.tab === 'project' && c.project ? 'local' : 'user')}
+              />
+            )}
+          </Box>
+        )}
+        <Input key="research" label="Find a tool: " placeholder="GitHub link, owner/name, or a name" submitLabel="look" onSubmit={text => research($, text)} />
         {c.message && <Text dimColor>{c.message}</Text>}
         {(n.tab === 'global' || !c.ask) &&
           rows.map(r => (
