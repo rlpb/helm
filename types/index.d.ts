@@ -28,7 +28,17 @@ export type ProjectState = 'new' | 'ready' | 'declined'
 /** What the person said they are building, and the entries that fit it. */
 export type Ask = { text: string; picks: string[] }
 
+export type Issue = { kind: string; key: string; text: string; fix?: string[] }
+
 export type Core = {
+  /** Claude Code's config folder, slashes forward. */
+  dir: string
+  /** The last result worth telling, in one line. */
+  message: string | null
+  /** The health check, once run. */
+  report: Issue[] | null
+  /** The issue key whose fix awaits a second press. */
+  confirm: string | null
   index: Entry[] | null
   project: Project | null
   state: ProjectState | null
