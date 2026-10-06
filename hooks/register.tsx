@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Core, Found, Hit, Meta, Nav, ProjectState } from '../types'
+import type { Core, Found, Hit, Meta, Nav, ProjectState, Setup } from '../types'
 import { installPlan, judge, parseTarget } from '../src/research'
 import { tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
@@ -10,12 +10,13 @@ import { isProject, localSettings, projectKey, projectName } from '../src/projec
 import { applyPicks, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
+import { ITEMS, DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
 import { GLOW_MS, cells, layout, svg } from '../src/graph'
 
 const PANE = 'helm'
 let isTerminal = false
 let fading = false
-const core = atom({ plugin: 'helm', key: 'core' } as const, { used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
+const core = atom({ plugin: 'helm', key: 'core' } as const, { github: false, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -155,6 +156,16 @@ async function install($: any, scope: 'user' | 'local') {
   await update($, core, s => ({ ...s, candidates, found: null, message: `Installed ${repo}${scope === 'local' ? ' for this project' : ''}. It loads in the next chat.` }))
 }
 
+/** Changes the GitHub baseline and keeps it for every project. */
+async function setSetup($: any, change: (s: Setup) => Setup) {
+  const c = await read($, core)
+  const setup = change(c.setup)
+  await $.store.set('github-setup', setup)
+  await update($, core, s => ({ ...s, setup }))
+}
+
+const toggleItem = (id: string) => (s: Setup): Setup => ({ ...s, items: s.items.includes(id) ? s.items.filter(x => x !== id) : [...s.items, id] })
+
 async function pickHit($: any, repo: string) {
   const found = await inspect($, repo)
   await update($, core, s => ({ ...s, hits: null, found, message: found ? null : 'Could not read that repository.' }))
@@ -195,8 +206,10 @@ export const register: Register = on => {
       settings,
     ).catch(() => [])
 
+    const github = hasGithub(await $.tool.list().catch(() => []))
+    const setup = { ...DEFAULT_SETUP, ...(((await $.store.get('github-setup')) as object | undefined) ?? {}) }
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
-    await update($, core, () => ({ used: {}, tick: 0, found: null, hits: null, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    await update($, core, () => ({ github: false, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, github, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
     return next(e)
   })
 
@@ -221,6 +234,18 @@ export const register: Register = on => {
       }
     }
     return next(e)
+  })
+
+  // The GitHub brief rides on the first prompt of a project, once.
+  on('prompt.submit', async ($, e, next) => {
+    const c = await read($, core)
+    if (!c.project || !c.github || !c.setup.on) return next(e)
+    const sentKey = `gh-sent:${c.project.key}`
+    if (await $.store.get(sentKey)) return next(e)
+    const text = brief(c.setup)
+    if (text === '') return next(e)
+    await $.store.set(sentKey, true)
+    return next({ ...e, text: `${e.text}\n\n${text}` })
   })
 
   on('command.run', { command: 'helm' }, async $ => {
@@ -301,6 +326,32 @@ export const register: Register = on => {
             submitLabel="find tools"
             onSubmit={text => update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } }))}
           />
+        )}
+        {n.tab === 'project' && c.project && c.github && (
+          <Box flexDirection="column">
+            <Button
+              key="gh"
+              label={`${c.setup.on ? '[x]' : '[ ]'} Set up GitHub to professional standards`}
+              onPress={() => setSetup($, s => ({ ...s, on: !s.on }))}
+            />
+            {c.setup.on && (
+              <Box flexDirection="column">
+                <Button key="license" label={`License: ${c.setup.license} (change)`} onPress={() => setSetup($, s => ({ ...s, license: nextLicense(s.license) }))} />
+                {ITEMS.map(i => (
+                  <Button key={`i-${i.id}`} label={`${c.setup.items.includes(i.id) ? '[x]' : '[ ]'} ${i.label}`} onPress={() => setSetup($, toggleItem(i.id))} />
+                ))}
+                <Input
+                  key="details"
+                  label="Details: "
+                  placeholder="extra directions, e.g. a private repo, a Ko-fi link"
+                  value={c.setup.details}
+                  submitLabel="save"
+                  onSubmit={text => setSetup($, s => ({ ...s, details: text }))}
+                />
+                <Text dimColor>Added once to your first prompt in this project.</Text>
+              </Box>
+            )}
+          </Box>
         )}
         {n.tab === 'project' && c.ask && (
           <Box flexDirection="column">

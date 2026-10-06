@@ -50,7 +50,13 @@ export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: string[] }
 export type Found = { meta: Meta; verdict: Verdict }
 export type Hit = { repo: string; description: string; stars: number }
 
+/** The GitHub baseline the person chose, kept across sessions. */
+export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
+
 export type Core = {
+  /** A GitHub connector is among the session's tools. */
+  github: boolean
+  setup: Setup
   /** When each tool was last used by Claude, in clock milliseconds, by entry key. */
   used: Record<string, number>
   /** Bumped while a glow fades, so a terminal redraws. */

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { applyPicks, undoPicks } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
+import { brief, hasGithub, nextLicense } from '../src/github'
 import type { Entry } from '../types'
 
 const entry = (key: string, on: boolean): Entry => ({ key, kind: key.startsWith('plugin:') ? 'plugin' : 'skill', name: key, description: '', category: 'other', on })
@@ -46,5 +47,23 @@ describe('the health check', () => {
 
   test('update commands are one per plugin and refuse odd ids', () => {
     expect(updateAll(['a@m', 'b;rm@m'])).toEqual([['claude', 'plugin', 'update', 'a@m']])
+  })
+})
+
+describe('the GitHub brief', () => {
+  test('it lists only the chosen items, names the license, and is empty when nothing is chosen', () => {
+    const base = { on: true, license: 'MIT' as const, items: ['readme', 'license'], details: 'private repo' }
+    const text = brief(base)
+    expect(text).toContain('README')
+    expect(text).toContain('MIT')
+    expect(text).not.toContain('Dependabot')
+    expect(text).toContain('private repo')
+    expect(brief({ ...base, items: [], details: '' })).toBe('')
+  })
+
+  test('a GitHub connector is found among MCP tools only', () => {
+    expect(hasGithub([{ name: 'mcp__github__create_issue', mcp: true }])).toBe(true)
+    expect(hasGithub([{ name: 'github_helper', mcp: false }])).toBe(false)
+    expect(nextLicense('none')).toBe('Apache-2.0')
   })
 })
