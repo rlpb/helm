@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/hero.svg" alt="Un timone con gli strumenti intorno" width="560">
+<img src="docs/hero.png" alt="Un timone con gli strumenti intorno" width="720">
 
 # Helm
 

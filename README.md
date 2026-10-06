@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/hero.svg" alt="A ship's wheel with tools around it" width="560">
+<img src="docs/hero.png" alt="A ship's wheel with tools around it" width="720">
 
 # Helm
 

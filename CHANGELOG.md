@@ -6,6 +6,10 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The README banner is now an illustration made with FLUX.2 Flex instead of a hand-drawn SVG.
+
 ## [0.1.1] - 2026-10-06
 
 ### Changed
