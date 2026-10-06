@@ -148,4 +148,6 @@ export const zh: Dict = {
   'g.expandAll': '全部展开',
   'g.collapseAll': '全部收起',
   'g.status': '状态',
+  'g.unchecked': '尚未检查',
+  'map.hint': '将鼠标移到圆点上查看说明。亮着的点是 Claude 刚用过的。',
 }

@@ -29,10 +29,20 @@ describe('the map', () => {
     const lay = layout(INDEX)
     const dark = svg(lay, {}, 0)
     const lit = svg(lay, { 'skill:a': 0 }, 1000)
-    expect(dark).not.toContain('<animate')
-    expect(lit.match(/<animate /g)).toHaveLength(2)
+    // The map always breathes (a ripple and a pulse per hub); a lit tool adds two more.
+    const extra = (lit.match(/<animate /g) ?? []).length - (dark.match(/<animate /g) ?? []).length
+    expect(extra).toBe(2)
     expect(lit.startsWith('<svg ')).toBe(true)
     expect(lit.endsWith('</svg>')).toBe(true)
+  })
+
+  test('every dot has a hover card, and the markup stays under the engine limit', () => {
+    const many = Array.from({ length: 193 }, (_, i) => ({ key: `skill:s${i}`, name: `s${i}`, description: 'Does a thing & more <b> for you', category: ['build', 'web', 'data'][i % 3], kind: 'skill', on: i % 2 === 0 })) as any
+    const text = svg(layout(many), {}, 0, { label: c => c })
+    expect(text.length).toBeLessThan(131072)
+    expect((text.match(/class="h h\d+"/g) ?? []).length).toBe(193)
+    expect((text.match(/class="t t\d+ /g) ?? []).length).toBe(193)
+    expect(text).toContain('Does a thing &amp; more &lt;b&gt; for you')
   })
 
   test('the terminal grid has columns x rows x 3 words', () => {

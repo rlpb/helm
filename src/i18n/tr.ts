@@ -148,4 +148,6 @@ export const tr: Dict = {
   'g.expandAll': 'Hepsini aç',
   'g.collapseAll': 'Hepsini kapat',
   'g.status': 'Durum',
+  'g.unchecked': 'Henüz denetlenmedi',
+  'map.hint': 'Ne olduğunu görmek için bir noktanın üzerine gelin. Yanan noktalar Claude’un az önce kullandıklarıdır.',
 }

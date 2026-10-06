@@ -148,4 +148,6 @@ export const pl: Dict = {
   'g.expandAll': 'Rozwiń wszystko',
   'g.collapseAll': 'Zwiń wszystko',
   'g.status': 'Stan',
+  'g.unchecked': 'Jeszcze nie sprawdzono',
+  'map.hint': 'Najedź na punkt, by zobaczyć, czym jest. Świecące punkty to to, czego Claude właśnie użył.',
 }

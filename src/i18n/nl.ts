@@ -148,4 +148,6 @@ export const nl: Dict = {
   'g.expandAll': 'Alles uitklappen',
   'g.collapseAll': 'Alles inklappen',
   'g.status': 'Status',
+  'g.unchecked': 'Nog niet gecontroleerd',
+  'map.hint': 'Houd de muis boven een punt om te zien wat het is. Lichtende punten gebruikte Claude net.',
 }

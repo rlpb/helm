@@ -274,7 +274,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
   const overall = !measured ? 'subtle' : flaggedList.length > 0 ? '#ff7a6b' : attention > 0 ? '#f2b84b' : '#6fd08c'
   const tw = Math.max(22, Math.floor((width - 7) / 3))
   const tile = (key: string, color: string, children: any) => (
-    <Box key={`tile-${key}`} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} width={tw}>
+    <Box key={`tile-${key}`} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} flexGrow={1} minWidth={tw}>
       {children}
     </Box>
   )
@@ -290,7 +290,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             {attention > 0 ? `▲ ${T('g.todo', attention)}` : `✓ ${T('g.good')}`}
           </Text>
         ) : (
-          <Text dimColor>·</Text>
+          <Text dimColor>{T('g.unchecked')}</Text>
         )}
       </Box>
       <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={1} marginTop={1}>
@@ -299,15 +299,16 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           report && report.length > 0 ? '#f2b84b' : '#6fd08c',
           <Box flexDirection="column">
             {title(T('g.health'), report && report.length > 0 ? '#f2b84b' : '#6fd08c')}
-            {report === null ? <Text dimColor>·</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
+            {report === null ? <Text dimColor>{T('g.unchecked')}</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
             {(report ?? []).map(i => (
               <Box key={`issue-${i.key}${i.kind}`} flexDirection="column" marginTop={1}>
                 <Text>{issueText(i)}</Text>
                 {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? T('g.again') : T('g.remove')} onPress={() => act.fix(i.key)} />}
               </Box>
             ))}
+            <Box flexGrow={1} />
             <Box marginTop={1}>
-              <Button key="check" label={T('g.tidy')} variant="primary" onPress={act.check} />
+              <Button key="check" label={T('g.tidy')} onPress={act.check} />
             </Box>
           </Box>,
         )}
@@ -317,8 +318,9 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
           <Box flexDirection="column">
             {title(T('g.updates'), '#5aa9ff')}
             <Text dimColor>{T('g.updatesText')}</Text>
+            <Box flexGrow={1} />
             <Box marginTop={1}>
-              <Button key="update" label={T('g.update')} variant="primary" onPress={act.update} />
+              <Button key="update" label={T('g.update')} onPress={act.update} />
             </Box>
           </Box>,
         )}
@@ -342,8 +344,9 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
                 </Box>
               )
             })}
+            <Box flexGrow={1} />
             <Box marginTop={1}>
-              {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} variant="primary" onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} variant="primary" onPress={act.installScanner} />}
+              {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} onPress={act.installScanner} />}
             </Box>
           </Box>,
         )}
@@ -410,11 +413,34 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             </Box>
             {isOpen && (
               <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={3}>
-                {items.map(x => (
-                  <Text key={x.key} color={x.on ? hex(r.category) : 'inactive'}>
-                    {`${x.on ? '●' : '○'} ${x.name}`}
-                  </Text>
-                ))}
+                {items.map(x => {
+                  const u = c.uses[x.key]
+                  return (
+                    <Box key={`tip-${x.key}`}>
+                      <Text color={x.on ? hex(r.category) : 'inactive'}>{`${x.on ? '●' : '○'} ${x.name}`}</Text>
+                      {/* The card that appears over the list while the pointer is on the name. */}
+                      <Box
+                        position="absolute"
+                        top={1}
+                        left={0}
+                        display="none"
+                        hover={{ display: 'flex' }}
+                        flexDirection="column"
+                        borderStyle="round"
+                        borderColor={hex(r.category)}
+                        backgroundColor="#1c1f26"
+                        paddingX={1}
+                        width={Math.min(52, Math.max(30, width - 10))}
+                      >
+                        <Text bold color="#e6e9ef">
+                          {x.name}
+                        </Text>
+                        <Text color="#9aa3b2">{`${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`}</Text>
+                        <Text color="#e6e9ef">{x.description || '—'}</Text>
+                      </Box>
+                    </Box>
+                  )
+                })}
               </Box>
             )}
           </Box>
@@ -433,64 +459,11 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     </Box>
   )
 
-  // ---- Map: the picture, a legend, and a box about one skill ----
-  const recent = Object.entries(c.uses)
-    .filter(([key]) => index.some(x => x.key === key))
-    .sort((a, b) => b[1].last - a[1].last)
-  const selected = index.find(x => x.key === (n.inspect ?? recent[0]?.[0])) ?? index[0]
-  const sel = selected ? c.uses[selected.key] : undefined
-  // The picker lists one category at a time, never the whole index: a long list may be one the engine refuses.
-  const inspectable = selected
-    ? [selected, ...index.filter(x => x.category === selected.category && x.key !== selected.key).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 59)].sort((a, b) => a.name.localeCompare(b.name))
-    : []
+  // ---- Map: only the picture; what each dot is shows on hover, inside the picture ----
   const mapTab = (
     <Box flexDirection="column">
       <Box marginTop={1}>{map}</Box>
-      <Text dimColor>{T('map.legend')}</Text>
-      {byCategory.length > 0 && (
-        <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1}>
-          {byCategory.map(r => (
-            <Button key={`cat-${r.category}`} label={`● ${T(`cat.${r.category}` as Key)}`} plain onPress={() => act.inspect(index.find(x => x.category === r.category)!.key)} />
-          ))}
-        </Box>
-      )}
-      {recent.length > 0 &&
-        card(
-          'recent',
-          <Box flexDirection="column">
-            {title(T('map.recent'), '#6fd08c')}
-            <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
-              {recent.slice(0, 6).map(([key]) => (
-                <Button key={`r-${key}`} label={index.find(x => x.key === key)!.name} plain onPress={() => act.inspect(key)} />
-              ))}
-            </Box>
-          </Box>,
-          '#6fd08c',
-        )}
-      {selected &&
-        card(
-          'inspect',
-          <Box flexDirection="column">
-            {title(T('map.inspect'), hex(selected.category))}
-            <Select
-              key="inspect"
-              value={selected.key}
-              options={inspectable.map((x: Entry) => ({ value: x.key, label: x.name }))}
-              onSelect={act.inspect}
-            />
-            <Box marginTop={1} columnGap={1}>
-              <Text bold color={hex(selected.category)}>
-                {selected.name}
-              </Text>
-              <Text dimColor>{`${T(`cat.${selected.category}` as Key)} · ${selected.on ? T('map.on') : T('map.off')}`}</Text>
-            </Box>
-            <Text dimColor>{sel ? `${T('map.uses', sel.n)} · ${T('map.last', ago(now - sel.last))}` : T('map.never')}</Text>
-            <Box marginTop={1}>
-              <Text>{selected.description || '—'}</Text>
-            </Box>
-          </Box>,
-          hex(selected.category),
-        )}
+      <Text dimColor>{T('map.hint')}</Text>
     </Box>
   )
 

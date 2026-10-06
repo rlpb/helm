@@ -16,7 +16,7 @@ import { foldVerdict, installCmd, isOverridable, parseScan, parseVersion, repoTa
 import { detectLang, isLang, t } from '../src/i18n'
 import type { Key, Lang } from '../src/i18n'
 import { Band } from '../src/views/band'
-import { Panel } from '../src/views/panel'
+import { Panel, ago } from '../src/views/panel'
 
 const PANE = 'helm'
 let isTerminal = false
@@ -617,7 +617,12 @@ export const register: Register = on => {
       let map: any = null
       if (n.tab === 'graph') {
         const lay = layout(c.index ?? [])
-        const opts = { label: (cat: string) => t(c.lang, `cat.${cat}` as Key), uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])) }
+        const opts = {
+          label: (cat: string) => t(c.lang, `cat.${cat}` as Key),
+          uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])),
+          note: (key: string) => (c.uses[key] ? `${t(c.lang, 'map.uses', c.uses[key].n)} · ${t(c.lang, 'map.last', ago(now - c.uses[key].last))}` : ''),
+          states: { on: t(c.lang, 'map.on'), off: t(c.lang, 'map.off') },
+        }
         isTerminal = terminal
         map = terminal ? (
           <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />

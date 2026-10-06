@@ -148,4 +148,6 @@ export const fr: Dict = {
   'g.expandAll': 'Tout déplier',
   'g.collapseAll': 'Tout replier',
   'g.status': 'État',
+  'g.unchecked': 'Pas encore vérifié',
+  'map.hint': 'Survolez un point pour savoir ce que c’est. Les points allumés sont ce que Claude vient d’utiliser.',
 }

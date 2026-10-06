@@ -167,10 +167,12 @@ function block(node, cols) {
     case 'Code':
       return [inline(node)]
     case 'Box': {
+      // A Box drawn display none is a hover card: it is not part of a still picture.
+      if (p.display === 'none') return []
       const outer = cols
       const padX = p.borderStyle ? (p.paddingX ?? 0) : 0
       const frame = p.borderStyle ? 2 + padX * 2 : 0
-      const fixed = typeof p.width === 'number' ? p.width : null
+      const fixed = typeof p.width === 'number' ? p.width : p.flexGrow && typeof p.minWidth === 'number' ? p.minWidth : null
       cols = (fixed ?? cols) - (p.marginLeft ?? 0) - frame
       const column = p.flexDirection === 'column'
       const children = kids(node)

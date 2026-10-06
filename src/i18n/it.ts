@@ -148,4 +148,6 @@ export const it: Dict = {
   'g.expandAll': 'Espandi tutto',
   'g.collapseAll': 'Comprimi tutto',
   'g.status': 'Stato',
+  'g.unchecked': 'Non ancora controllato',
+  'map.hint': 'Passa su un punto per vedere cos’è. I punti accesi sono ciò che Claude ha appena usato.',
 }

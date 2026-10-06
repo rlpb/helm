@@ -148,4 +148,6 @@ export const de: Dict = {
   'g.expandAll': 'Alles aufklappen',
   'g.collapseAll': 'Alles zuklappen',
   'g.status': 'Zustand',
+  'g.unchecked': 'Noch nicht geprüft',
+  'map.hint': 'Mit der Maus über einen Punkt fahren zeigt, was es ist. Leuchtende Punkte hat Claude gerade benutzt.',
 }

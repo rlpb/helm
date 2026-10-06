@@ -148,4 +148,6 @@ export const pt: Dict = {
   'g.expandAll': 'Expandir tudo',
   'g.collapseAll': 'Recolher tudo',
   'g.status': 'Estado',
+  'g.unchecked': 'Ainda não verificado',
+  'map.hint': 'Passe o rato num ponto para ver o que é. Os acesos são o que o Claude acabou de usar.',
 }

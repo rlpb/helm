@@ -148,4 +148,6 @@ export const es: Dict = {
   'g.expandAll': 'Expandir todo',
   'g.collapseAll': 'Contraer todo',
   'g.status': 'Estado',
+  'g.unchecked': 'Aún sin comprobar',
+  'map.hint': 'Pasa el ratón por un punto para ver qué es. Los encendidos son lo que Claude acaba de usar.',
 }

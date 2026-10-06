@@ -148,4 +148,6 @@ export const ar: Dict = {
   'g.expandAll': 'توسيع الكل',
   'g.collapseAll': 'طيّ الكل',
   'g.status': 'الحالة',
+  'g.unchecked': 'لم يُفحص بعد',
+  'map.hint': 'مرّر المؤشر على نقطة لتعرف ما هي. النقاط المضيئة هي ما استخدمه Claude للتو.',
 }

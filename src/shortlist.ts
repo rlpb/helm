@@ -15,7 +15,7 @@ const stems = (text: string): string[] =>
   [...new Set(text.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 1 && !STOP.has(w)))]
 
 /** Every entry that matches `text` at all, with its score and how many different words hit, best first. A hit in the name counts 3, in the description 1. */
-export function scored(index: Entry[], text: string): { key: string; score: number; words: number }[] {
+export function scored(index: Entry[], text: string): { key: string; score: number; words: number; named: number }[] {
   const want = stems(text)
   if (want.length === 0) return []
   const hit = (found: string[], w: string) => found.some(f => f.startsWith(w) || w.startsWith(f))
@@ -27,6 +27,7 @@ export function scored(index: Entry[], text: string): { key: string; score: numb
         key: e.key,
         score: want.reduce((n, w) => n + (hit(inName, w) ? 3 : 0) + (hit(inText, w) ? 1 : 0), 0),
         words: want.filter(w => hit(inName, w) || hit(inText, w)).length,
+        named: want.filter(w => hit(inName, w)).length,
       }
     })
     .filter(r => r.score > 0)

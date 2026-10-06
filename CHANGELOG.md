@@ -6,6 +6,18 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-06
+
+### Changed
+
+- **The Map is only a map.** A dark canvas with a slow ripple from the middle, pulsing category hubs, curved spokes, and every tool as a dot: filled when on, a ring when off, named when Claude used it. **Hover a dot** and a card shows what it is, its category, whether it is on, and how often it was used. The inspector is gone. Big and small categories alternate around the wheel and each gets room for its size, so clusters no longer overlap.
+- **Tools and skills in Global show a card on hover** with the name, category, state, use count and what the tool does.
+- **A tidier Status section:** three equal tiles that fill the width, buttons pinned to the bottom of each, plain buttons instead of white ones, and "Not checked yet" instead of a stray dot.
+
+### Fixed
+
+- **A tool is offered for a prompt only when the prompt names it** (a word of its name) and a second word fits. Long descriptions matched almost any prompt, which is why Claude SEO kept being suggested.
+
 ## [0.8.1] - 2026-10-06
 
 ### Fixed
@@ -137,7 +149,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/rlpb/helm/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rlpb/helm/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rlpb/helm/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/rlpb/helm/compare/v0.7.2...v0.7.3

@@ -148,4 +148,6 @@ export const ja: Dict = {
   'g.expandAll': 'すべて展開',
   'g.collapseAll': 'すべて折りたたむ',
   'g.status': '状態',
+  'g.unchecked': 'まだ確認していません',
+  'map.hint': '点にカーソルを重ねると内容が出ます。光っている点は Claude がいま使ったものです。',
 }

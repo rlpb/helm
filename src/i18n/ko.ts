@@ -148,4 +148,6 @@ export const ko: Dict = {
   'g.expandAll': '모두 펼치기',
   'g.collapseAll': '모두 접기',
   'g.status': '상태',
+  'g.unchecked': '아직 확인하지 않음',
+  'map.hint': '점 위에 마우스를 올리면 설명이 보입니다. 켜진 점은 Claude가 방금 쓴 것입니다.',
 }

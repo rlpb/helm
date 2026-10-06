@@ -150,6 +150,8 @@ export const en = {
   'g.expandAll': 'Expand all',
   'g.collapseAll': 'Collapse all',
   'g.status': 'Status',
+  'g.unchecked': 'Not checked yet',
+  'map.hint': 'Hover a dot for what it is. Lit dots are what Claude just used.',
 }
 
 export type Dict = typeof en

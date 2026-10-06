@@ -50,11 +50,8 @@ for (const surface of ['terminal', 'desktop']) {
     await boot($, PROJECT)
     const ui = await $.ui.mount({ plugin: 'helm', surface, component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
     await ui.press({ key: 'graph' })
-    const select = (await ui.findAll({ type: 'Select' })).find((s: any) => s.props.key === 'inspect')
-    const values = (select.props.options as { value: string }[]).map(o => o.value)
-    expect(values.length).toBeGreaterThan(0)
-    expect(values.length).toBeLessThanOrEqual(60)
-    expect(new Set(values).size).toBe(values.length)
+    const drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain(surface === 'desktop' ? 'class=\\"h h0\\"' : 'Raster')
     expect(JSON.stringify(await ui.drawn())).not.toContain('could not be drawn')
   })
 }

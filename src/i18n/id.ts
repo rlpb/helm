@@ -148,4 +148,6 @@ export const id: Dict = {
   'g.expandAll': 'Buka semua',
   'g.collapseAll': 'Tutup semua',
   'g.status': 'Status',
+  'g.unchecked': 'Belum diperiksa',
+  'map.hint': 'Arahkan kursor ke titik untuk melihat apa itu. Titik menyala adalah yang baru dipakai Claude.',
 }
