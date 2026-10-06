@@ -17,7 +17,7 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 ## What it does
 
 - **Set up a project.** Open a new folder and Helm asks what you are building. It shortlists the fitting tools from what you already have installed, and one press turns them on for that folder only. Undo puts the folder back exactly as it was.
-- **Vet a tool, or a whole list.** Paste a GitHub link, `owner/name`, a name, or a whole text full of them. Helm reads each repository (license, archived or not, last update, stars, and whether it holds a plugin or a skill), scans it, gives a plain verdict per line, and installs only what you tick. Changes apply at once when Claude Code allows it. A tool you added for one project is offered later for all of them.
+- **Vet a tool, or a whole list.** Paste a GitHub link, `owner/name`, a name, or a whole text full of them. Helm reads each repository (license, archived or not, last update, stars, and whether it holds a plugin, skills, an MCP server or a command-line tool, with the exact command that installs it), scans it, gives a plain verdict per line, and installs only what you tick. Changes apply at once when Claude Code allows it. A tool you added for one project is offered later for all of them.
 - **See what is in use here.** The top of the **Project** page lists only what Claude used in this folder, by category, with how often and when. A skill that has just run is lit. It costs no tokens.
 - **Keep your limits in view.** A quiet row above the prompt shows the 5-hour and weekly limits and the context as small bars, plus the skill Claude is using now, with a security dot and an **Open Helm** button. The figures follow the session as it runs.
 - **Speaks your language.** 16 languages, following the computer's by default, changeable from the panel.
@@ -59,7 +59,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.12.3.zip --repo rlpb/helm
+gh attestation verify helm-0.12.4.zip --repo rlpb/helm
 ```
 
 ## Support

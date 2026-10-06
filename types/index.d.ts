@@ -50,6 +50,8 @@ export type Meta = {
   isSkill: boolean
   /** Skills in subfolders, or a plugin with no catalog: Helm wraps the repository in a catalog of its own to install it. */
   wrap?: { plugin: boolean; skills: string[] } | null
+  /** A program, not an extension: an MCP server or a command-line tool, with the command that installs it (`{scope}` stands for the scope asked). */
+  app?: { type: 'mcp' | 'cli'; argv: string[] } | null
 }
 
 /** Why a tool got its verdict: a code the panel turns into a sentence, and a number when one is needed. */

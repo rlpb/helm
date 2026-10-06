@@ -377,6 +377,59 @@ async function fixIssue($: any, key: string) {
 const gh = ($: any, args: string[]) => $.process.run(['gh', ...args], { timeoutMs: 30_000 }).catch(() => ({ exitCode: -1, stdout: '', stderr: '' }))
 const RAW = ['-H', 'Accept: application/vnd.github.raw']
 
+const rawFile = async ($: any, repo: string, path: string): Promise<string> => {
+  const r = await gh($, ['api', ...RAW, `repos/${repo}/contents/${path}`])
+  return r.exitCode === 0 ? String(r.stdout ?? '') : ''
+}
+
+/** Whether an npm package of that name is published from this repository (and not squatting the name). */
+async function publishedFrom($: any, pkg: string, repo: string): Promise<boolean> {
+  const r = await $.process.run(['npm', 'view', pkg, 'repository.url', '--json'], { timeoutMs: 20_000 }).catch(() => null)
+  return !!r && r.exitCode === 0 && String(r.stdout ?? '').toLowerCase().includes(repo.toLowerCase())
+}
+
+/** A program behind the repository: an MCP server (from its registry manifest or package) or a command-line tool, with the command that installs it. */
+async function findApp($: any, repo: string, paths: string[]): Promise<Meta['app']> {
+  const name = (repo.split('/')[1] ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '-')
+  const mcp = (tail: string[]): Meta['app'] => ({ type: 'mcp', argv: ['claude', 'mcp', 'add', '--scope', '{scope}', name, ...tail] })
+  if (paths.includes('server.json')) {
+    // The MCP registry's own manifest says how the server runs.
+    try {
+      const m = JSON.parse(await rawFile($, repo, 'server.json'))
+      const pkg = (m.packages ?? []).find((p: any) => p.registryType === 'npm' || p.registryType === 'pypi')
+      // Arguments the manifest fixes for the server (the `mcp` in `rea mcp`) come after the package.
+      const args = ((pkg?.packageArguments ?? []) as any[]).filter(a => a.type === 'positional' && typeof a.value === 'string').map(a => String(a.value))
+      if (pkg?.registryType === 'npm') return mcp(['--', 'npx', '-y', pkg.version ? `${pkg.identifier}@${pkg.version}` : String(pkg.identifier), ...args])
+      if (pkg?.registryType === 'pypi') return mcp(['--', 'uvx', String(pkg.identifier), ...args])
+      const remote = (m.remotes ?? [])[0]
+      if (remote?.url) return { type: 'mcp', argv: ['claude', 'mcp', 'add', '--scope', '{scope}', '--transport', remote.type === 'sse' ? 'sse' : 'http', name, String(remote.url)] }
+    } catch {
+      // Not readable: look at the other manifests.
+    }
+  }
+  if (paths.includes('package.json')) {
+    try {
+      const pkg = JSON.parse(await rawFile($, repo, 'package.json'))
+      if (pkg.bin && typeof pkg.name === 'string') {
+        const spec = (await publishedFrom($, pkg.name, repo)) ? pkg.name : `github:${repo}`
+        const isMcp = /\bmcp\b/i.test(`${pkg.name} ${pkg.description ?? ''} ${(pkg.keywords ?? []).join(' ')}`)
+        return isMcp ? mcp(['--', 'npx', '-y', spec]) : { type: 'cli', argv: ['npm', 'install', '-g', spec] }
+      }
+    } catch {
+      // Not readable: look at the other manifests.
+    }
+  }
+  if (paths.includes('pyproject.toml') && /^\[(project|tool\.poetry)\.scripts\]/m.test(await rawFile($, repo, 'pyproject.toml'))) {
+    return { type: 'cli', argv: ['uv', 'tool', 'install', `git+https://github.com/${repo}`] }
+  }
+  if (paths.includes('Cargo.toml') && paths.includes('src/main.rs')) return { type: 'cli', argv: ['cargo', 'install', '--git', `https://github.com/${repo}.git`] }
+  if (paths.includes('go.mod') && paths.includes('main.go')) {
+    const mod = (await rawFile($, repo, 'go.mod')).match(/^module\s+(\S+)/m)?.[1]
+    if (mod) return { type: 'cli', argv: ['go', 'install', `${mod}@latest`] }
+  }
+  return null
+}
+
 /** Reads a repo the way a careful person would: its page, then whether it holds a plugin catalog or one skill. */
 async function inspect($: any, repo: string, quiet = false): Promise<Found | null> {
   const page = await gh($, ['api', `repos/${repo}`])
@@ -399,6 +452,7 @@ async function inspect($: any, repo: string, quiet = false): Promise<Found | nul
   const skill = marketplace ? { exitCode: 1 } : await gh($, ['api', ...RAW, `repos/${repo}/contents/SKILL.md`])
   // Neither a catalog nor one skill at the top: look at the whole tree for skills in subfolders or a plugin manifest.
   let wrap: Meta['wrap'] = null
+  let app: Meta['app'] = null
   if (!marketplace && skill.exitCode !== 0) {
     const tree = await gh($, ['api', `repos/${repo}/git/trees/HEAD?recursive=1`])
     try {
@@ -410,6 +464,7 @@ async function inspect($: any, repo: string, quiet = false): Promise<Found | nul
         .filter(x => x !== '' && x.split('/').length <= 4)
         .slice(0, 60)
       if (plugin || skills.length > 0) wrap = { plugin, skills: plugin ? [] : skills }
+      app = await findApp($, repo, paths)
     } catch {
       // No readable tree: the repository stays "nothing to install".
     }
@@ -424,16 +479,21 @@ async function inspect($: any, repo: string, quiet = false): Promise<Found | nul
     marketplace,
     isSkill: skill.exitCode === 0,
     wrap,
+    app,
   }
   let verdict = judge(meta, await $.clock.now())
   const scanner = (await read($, core)).scanner.state
   const target = repoTarget(meta.repo)
   let scan: ScanResult | null = null
+  let missed: 'size' | 'slow' | undefined
   if (verdict.level !== 'no' && target && scanner === 'ready') {
     if (!quiet) await say($, 'msg.scanning')
-    scan = await scanOne($, target)
+    // Big repositories take minutes: a patient limit, and a reason when there is still no report.
+    const got = await scanDetailed($, target, quiet ? 150_000 : 120_000)
+    scan = got.scan
+    missed = got.why
   }
-  if (verdict.level !== 'no') verdict = foldVerdict(verdict, scan, scanner)
+  if (verdict.level !== 'no') verdict = foldVerdict(verdict, scan, scanner, missed)
   return { meta, verdict, scan }
 }
 
@@ -634,11 +694,15 @@ async function probeScanner($: any) {
   await update($, core, s => ({ ...s, scanner: version ? { state: 'ready', version } : { state: 'missing', version: null } }))
 }
 
-/** One scan: the report comes on stdout, and exit 1 only means "do not install". */
-async function scanOne($: any, target: string, timeoutMs = 45_000): Promise<ScanResult | null> {
+/** One scan: the report comes on stdout, and exit 1 only means "do not install". `why` says what went wrong when there is no report. */
+async function scanDetailed($: any, target: string, timeoutMs = 45_000): Promise<{ scan: ScanResult | null; why?: 'size' | 'slow' }> {
   const r = await $.process.run(scanCmd(target), { timeoutMs }).catch(() => null)
-  return r ? parseScan(String(r.stdout ?? '')) : null
+  if (!r) return { scan: null, why: 'slow' }
+  const scan = parseScan(String(r.stdout ?? ''))
+  if (scan) return { scan }
+  return { scan: null, why: /byte_limit|truncated/i.test(String(r.stderr ?? '')) ? 'size' : undefined }
 }
+const scanOne = async ($: any, target: string, timeoutMs = 45_000): Promise<ScanResult | null> => (await scanDetailed($, target, timeoutMs)).scan
 
 async function installScanner($: any) {
   await work($, 'msg.installing')

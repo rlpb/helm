@@ -10,6 +10,7 @@ import { shortlist } from '../shortlist'
 import { estimateTokens, refinePrompt } from '../suggest'
 import { flagged, isOverridable, watched } from '../skillspector'
 import { LEARNING_DAYS, visible } from '../health'
+import { installPlan, runsText } from '../research'
 import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
@@ -60,6 +61,9 @@ const WHY: Record<string, Key> = {
 const ISSUE: Record<string, Key> = { 'stale-plugin': 'issue.stale', 'broken-skill': 'issue.broken', 'no-description': 'issue.nodesc', duplicate: 'issue.dup', similar: 'issue.similar', unused: 'issue.unused' }
 const ITEM_LABEL: Record<string, Key> = { license: 'gh.licenseFile', protection: 'gh.branch', community: 'gh.contributing' }
 
+// "Not scanned" says why: too big for the scanner, or too slow.
+const whyKey = (r: { k: string; n?: number }): Key => (r.k === 'unscanned' && r.n === 1 ? 'why.toobig' : r.k === 'unscanned' && r.n === 2 ? 'why.slow' : WHY[r.k])
+
 const hex = (cat: string) => `#${(COLOR[cat] ?? COLOR.other).toString(16).padStart(6, '0')}`
 
 /** A short, language-free "how long ago": 40s, 5m, 3h, 2d. */
@@ -93,6 +97,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
   )
   const tab = (id: Nav['tab'], label: string) => <Button key={id} label={label} variant={n.tab === id ? 'primary' : 'secondary'} onPress={() => act.tab(id)} />
 
+  const runs = (meta: Core['found'] extends infer F ? (F extends { meta: infer M } ? M : never) : never) => runsText(installPlan(meta, here && n.tab === 'project' ? 'local' : 'user', `${c.dir}/skills`, `${c.dir}/helm-markets`) ?? [])
   const topLine = c.scanning ? T('sec.running', c.scanning.done, c.scanning.total) : c.message
   const header = (
     <Box flexDirection="column">
@@ -161,7 +166,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
               if (row.state === 'unsupported') return T('batch.unsupported')
               if (row.state === 'installed') return T('batch.installed')
               if (row.state === 'failed') return `${T('batch.failed')}${row.why ? `: ${row.why}` : ''}`
-              return [T(level === 'ok' ? 'verdict.ok' : level === 'caution' ? 'verdict.caution' : 'verdict.no'), ...(f?.verdict.reasons ?? []).map(r => T(WHY[r.k], r.n ?? 0)), ...(row.via ? [T('batch.matched', row.via)] : [])].join(' · ')
+              return [T(level === 'ok' ? 'verdict.ok' : level === 'caution' ? 'verdict.caution' : 'verdict.no'), ...(f?.verdict.reasons ?? []).map(r => T(whyKey(r), r.n ?? 0)), ...(row.via ? [T('batch.matched', row.via)] : [])].join(' · ')
             })()
             return (
               <Box key={`b-${i}`} flexDirection="column" marginTop={1}>
@@ -171,6 +176,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
                   {f && <Text dimColor>{`${f.meta.license ?? '—'} · ${f.meta.stars}★`}</Text>}
                 </Box>
                 <Text color={color} dimColor wrap="truncate-end">{`   ${note}`}</Text>
+                {ready && f && runs(f.meta) !== '' && <Text dimColor wrap="truncate-end">{`   ${T('batch.runs', runs(f.meta))}`}</Text>}
               </Box>
             )
           })}
@@ -197,7 +203,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
             {T(c.found.verdict.level === 'ok' ? 'verdict.ok' : c.found.verdict.level === 'caution' ? 'verdict.caution' : 'verdict.no')}
           </Text>
           {c.found.verdict.reasons.map(r => (
-            <Text key={r.k} dimColor>{`· ${T(WHY[r.k], r.n ?? 0)}`}</Text>
+            <Text key={r.k} dimColor>{`· ${T(whyKey(r), r.n ?? 0)}`}</Text>
           ))}
           {(c.found.scan?.top ?? []).map(f => (
             <Text key={`${f.pattern}${f.where}`} dimColor wrap="truncate-end">

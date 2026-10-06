@@ -24,7 +24,7 @@ export function judge(m: Meta, now: number): Verdict {
   const no: Reason[] = []
   const caution: Reason[] = []
   if (m.archived) no.push({ k: 'archived' })
-  if (!m.marketplace && !m.isSkill && !m.wrap) no.push({ k: 'noform' })
+  if (!m.marketplace && !m.isSkill && !m.wrap && !m.app) no.push({ k: 'noform' })
   if (!m.license || m.license === 'NOASSERTION') caution.push({ k: 'nolicense' })
   const idle = (now - Date.parse(m.pushedAt)) / 86_400_000
   if (Number.isFinite(idle) && idle > 365) caution.push({ k: 'idle', n: Math.round(idle / 30) })
@@ -48,22 +48,34 @@ export function wrapperFile(m: Meta, marketsDir: string): { dir: string; path: s
   return { dir, path: `${dir}/.claude-plugin/marketplace.json`, text, market, plugin: name }
 }
 
+const TOKEN = /^[A-Za-z0-9@._:/=+~-]+$/
+
+/** The command that installs a program, once the scope is filled in; null when anything in it is not a plain word. */
+function appCommand(m: Meta, scope: string): string[] | null {
+  if (!m.app || m.app.argv.length === 0 || !m.app.argv.every(a => a === '{scope}' || TOKEN.test(a))) return null
+  return m.app.argv.map(a => (a === '{scope}' ? scope : a))
+}
+
 /** The commands that install it, or `null` when the form is not one Helm knows. */
 export function installPlan(m: Meta, scope: 'user' | 'local', skillsDir: string, marketsDir = ''): string[][] | null {
-  if (m.marketplace && SAFE.test(m.marketplace.name) && m.marketplace.plugins.length > 0 && m.marketplace.plugins.every(p => SAFE.test(p))) {
-    return [
-      ['claude', 'plugin', 'marketplace', 'add', m.repo],
-      ...m.marketplace.plugins.map(p => ['claude', 'plugin', 'install', `${p}@${m.marketplace!.name}`, '--scope', scope]),
-    ]
-  }
+  const steps: string[][] = []
   const wrap = wrapperFile(m, marketsDir)
-  if (wrap) return [['claude', 'plugin', 'marketplace', 'add', wrap.dir], ['claude', 'plugin', 'install', `${wrap.plugin}@${wrap.market}`, '--scope', scope]]
-  if (m.isSkill) {
+  if (m.marketplace && SAFE.test(m.marketplace.name) && m.marketplace.plugins.length > 0 && m.marketplace.plugins.every(p => SAFE.test(p))) {
+    steps.push(['claude', 'plugin', 'marketplace', 'add', m.repo], ...m.marketplace.plugins.map(p => ['claude', 'plugin', 'install', `${p}@${m.marketplace!.name}`, '--scope', scope]))
+  } else if (wrap) {
+    steps.push(['claude', 'plugin', 'marketplace', 'add', wrap.dir], ['claude', 'plugin', 'install', `${wrap.plugin}@${wrap.market}`, '--scope', scope])
+  } else if (m.isSkill) {
     const name = m.repo.split('/')[1]
-    return SAFE.test(name) ? [['git', 'clone', '--depth', '1', `https://github.com/${m.repo}.git`, `${skillsDir}/${name}`]] : null
+    if (SAFE.test(name)) steps.push(['git', 'clone', '--depth', '1', `https://github.com/${m.repo}.git`, `${skillsDir}/${name}`])
   }
-  return null
+  // A repository can be both: skills for Claude and a program behind them.
+  const app = appCommand(m, scope)
+  if (app) steps.push(app)
+  return steps.length > 0 ? steps : null
 }
+
+/** What the person is told will run: the installing commands, without the plumbing of adding a catalog. */
+export const runsText = (plan: string[][]): string => plan.filter(c => c[2] !== 'marketplace').map(c => c.join(' ')).join('  ›  ')
 
 const flat = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
 

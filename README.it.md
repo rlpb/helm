@@ -17,7 +17,7 @@ Ogni settimana escono nuovi plugin, skill e strumenti. Helm è il posto in Claud
 ## Cosa fa
 
 - **Prepara un progetto.** Apri una cartella nuova e Helm chiede cosa stai costruendo. Propone gli strumenti adatti tra quelli già installati, e un solo tasto li accende solo per quella cartella. Annulla rimette la cartella esattamente com'era.
-- **Controlla uno strumento, o un intero elenco.** Incolla un link GitHub, `owner/nome`, un nome o un testo intero pieno di questi. Helm legge ogni repository (licenza, se è archiviato, ultimo aggiornamento, stelle, e se contiene un plugin o una skill), lo scansiona, dà un verdetto in parole semplici per ogni riga e installa solo ciò che spunti. Le modifiche valgono subito quando Claude Code lo permette. Uno strumento aggiunto per un progetto viene poi proposto per tutti.
+- **Controlla uno strumento, o un intero elenco.** Incolla un link GitHub, `owner/nome`, un nome o un testo intero pieno di questi. Helm legge ogni repository (licenza, se è archiviato, ultimo aggiornamento, stelle, e se contiene un plugin, skill, un server MCP o uno strumento da riga di comando, con il comando esatto che lo installa), lo scansiona, dà un verdetto in parole semplici per ogni riga e installa solo ciò che spunti. Le modifiche valgono subito quando Claude Code lo permette. Uno strumento aggiunto per un progetto viene poi proposto per tutti.
 - **Vedi cosa è in uso qui.** In cima alla pagina **Project** compare solo ciò che Claude ha usato in questa cartella, per categoria, con quante volte e quando. Una skill appena usata è accesa. Non costa token.
 - **Tieni i limiti sott'occhio.** Una riga discreta sopra il prompt mostra i limiti delle 5 ore e della settimana e il contesto come piccole barre, più la skill che Claude sta usando, con un puntino di sicurezza e il tasto **Open Helm**. I valori seguono la sessione mentre lavora.
 - **Parla la tua lingua.** 16 lingue, di default quella del computer, cambiabile dal pannello.
@@ -59,7 +59,7 @@ Le release sono costruite dal workflow di release a partire da un commit con tag
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.12.3.zip --repo rlpb/helm
+gh attestation verify helm-0.12.4.zip --repo rlpb/helm
 ```
 
 ## Supporto

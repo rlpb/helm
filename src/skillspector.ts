@@ -62,7 +62,7 @@ export function parseScan(text: string): ScanResult | null {
 export const blocks = (scan: ScanResult): boolean => scan.critical >= 1 || scan.high >= 3
 
 /** Adds what SkillSpector found to a verdict. The level can only go up. */
-export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unknown' | 'missing' | 'ready'): Verdict {
+export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unknown' | 'missing' | 'ready', missed?: 'size' | 'slow'): Verdict {
   const reasons: Reason[] = [...v.reasons]
   let level = v.level
   const raise = (to: Verdict['level']) => {
@@ -72,7 +72,7 @@ export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unkno
     reasons.push({ k: 'noscanner' })
     raise('caution')
   } else if (!scan) {
-    reasons.push({ k: 'unscanned' })
+    reasons.push(missed ? { k: 'unscanned', n: missed === 'size' ? 1 : 2 } : { k: 'unscanned' })
     raise('caution')
   } else if (scan.recommendation !== 'SAFE') {
     if (scan.flagged > 0 && scan.recommendation === 'DO_NOT_INSTALL' && blocks(scan)) {

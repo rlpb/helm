@@ -12,7 +12,13 @@ const run = (argv: string[]) => {
   if (call.includes('search repos')) return { exitCode: 0, stdout: JSON.stringify([{ fullName: 'demo/caveman', stargazersCount: 900 }]), stderr: '' }
   const tree = call.match(/repos\/([^/\s]+\/[^/\s]+)\/git\/trees/)
   if (tree) {
-    const paths = tree[1] === 'demo/coll' ? ['README.md', 'skills/one/SKILL.md', 'skills/two/SKILL.md', 'tests/x/SKILL.md'] : ['README.md']
+    const TREES: Record<string, string[]> = {
+      'demo/coll': ['README.md', 'skills/one/SKILL.md', 'skills/two/SKILL.md', 'tests/x/SKILL.md'],
+      'demo/srv': ['README.md', 'server.json', 'package.json'],
+      'demo/cli': ['README.md', 'pyproject.toml'],
+      'demo/pkg': ['README.md', 'package.json'],
+    }
+    const paths = TREES[tree[1]] ?? ['README.md']
     return { exitCode: 0, stdout: JSON.stringify({ tree: paths.map(path => ({ path, type: 'blob' })) }), stderr: '' }
   }
   const m = call.match(/repos\/([^/\s]+\/[^/\s]+)(?:\/contents\/(.+))?$/)
@@ -21,6 +27,10 @@ const run = (argv: string[]) => {
   if (full === 'demo/gone') return { exitCode: 1, stdout: '', stderr: '404' }
   if (!file) return { exitCode: 0, stdout: JSON.stringify(repo(full)), stderr: '' }
   if (full === 'demo/bare' || full === 'demo/coll') return { exitCode: 1, stdout: '', stderr: '' }
+  if (full === 'demo/srv' && file === 'server.json') return { exitCode: 0, stdout: JSON.stringify({ packages: [{ registryType: 'npm', identifier: '@demo/srv', version: '1.2.0', packageArguments: [{ type: 'positional', value: 'mcp' }] }] }), stderr: '' }
+  if (full === 'demo/cli' && file === 'pyproject.toml') return { exitCode: 0, stdout: '[project]\nname = "cli"\n\n[project.scripts]\ncli = "cli:main"\n', stderr: '' }
+  if (full === 'demo/pkg' && file === 'package.json') return { exitCode: 0, stdout: JSON.stringify({ name: 'pkg', description: 'A thing', bin: { pkg: 'cli.js' } }), stderr: '' }
+  if (['demo/srv', 'demo/cli', 'demo/pkg'].includes(full)) return { exitCode: 1, stdout: '', stderr: '' }
   if (file.endsWith('marketplace.json')) return { exitCode: 0, stdout: JSON.stringify({ name: 'mk', plugins: [{ name: full.split('/')[1] }] }), stderr: '' }
   return { exitCode: 1, stdout: '', stderr: '' }
 }
@@ -86,4 +96,23 @@ test('a repository with skills in subfolders is installed through a catalog Helm
   const plugin = JSON.parse(String(file![1])).plugins[0]
   expect(plugin.skills).toEqual(['./skills/one', './skills/two'])
   expect(plugin.strict).toBe(false)
+})
+
+test('programs are installed too: an MCP server from its registry manifest, a Python tool, an npm tool', async ($, on) => {
+  const w = world($, on, { run })
+  await boot($, PROJECT)
+  const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
+  await ui.input({ key: 'research', text: ['demo/srv', 'demo/cli', 'demo/pkg'].join('\n') })
+  await new Promise(r => setTimeout(r, 300))
+  const text = await textOf(ui)
+  expect(text).toContain('Installs with: claude mcp add --scope local srv -- npx -y @demo/srv@1.2.0 mcp')
+  expect(text).toContain('Installs with: uv tool install git+https://github.com/demo/cli')
+  expect(text).toContain('Installs with: npm install -g github:demo/pkg')
+  expect(w.ran.some(a => a.join(' ').includes('mcp add') || a.join(' ').includes('tool install git+'))).toBe(false)
+  await ui.press({ key: 'b-install' })
+  await new Promise(r => setTimeout(r, 300))
+  const ran = w.ran.map(a => a.join(' '))
+  expect(ran).toContain('claude mcp add --scope local srv -- npx -y @demo/srv@1.2.0 mcp')
+  expect(ran).toContain('uv tool install git+https://github.com/demo/cli')
+  expect(ran).toContain('npm install -g github:demo/pkg')
 })

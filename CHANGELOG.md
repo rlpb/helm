@@ -6,6 +6,16 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-10-06
+
+### Added
+
+- **Programs install too, not only skills and plugins.** Helm reads the repository down to its manifests and finds how it installs: an **MCP server** from its registry manifest (`server.json`, with the arguments it fixes) or its npm package, a **Python tool** (`[project.scripts]`, through `uv tool install`), an **npm command** (`bin`), a Rust or Go program. Each row says exactly which command will run, and nothing runs until you tick it. A repository can be both (skills for Claude and a server behind them) and installs both. Checked against the real manifests of the repositories that used to be refused.
+
+### Changed
+
+- **A scan that cannot finish says why**: too big for SkillSpector, or not finished in time. The batch scan waits up to 150 s instead of 45 s.
+
 ## [0.12.3] - 2026-10-06
 
 ### Changed
@@ -273,7 +283,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.4...HEAD
+[0.12.4]: https://github.com/rlpb/helm/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/rlpb/helm/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/rlpb/helm/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/rlpb/helm/compare/v0.12.0...v0.12.1

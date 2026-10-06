@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Helm: the control panel for Claude Code. It sets up each project with the right skills, shows what is in use, and vets new tools before you add them.",
-    "version": "0.12.3"
+    "version": "0.12.4"
   },
   "plugins": [
     {
       "name": "helm",
       "source": "./",
       "description": "The control panel for Claude Code: it sets up each project with the right skills and tools, shows what is in use, and vets new tools before you add them.",
-      "version": "0.12.3",
+      "version": "0.12.4",
       "author": {
         "name": "rlpb",
         "url": "https://github.com/rlpb"
