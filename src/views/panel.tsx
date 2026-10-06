@@ -27,8 +27,6 @@ export type Act = {
   item: (id: string) => void
   details: (text: string) => void
   research: (text: string) => void
-  search: () => void
-  clearDraft: () => void
   pickRow: (i: number) => void
   installBatch: (scope: 'user' | 'local') => void
   clearBatch: () => void
@@ -44,7 +42,7 @@ export type Act = {
   anyway: (scope: 'user' | 'local') => void
 }
 
-type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; now: number; lang: Lang; editor: any }
+type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; now: number; lang: Lang }
 
 const LEVEL = { ok: 'success', caution: 'warning', no: 'error' } as const
 const WHY: Record<string, Key> = {
@@ -73,7 +71,7 @@ export function ago(ms: number): string {
   return `${Math.round(s / 86400)}d`
 }
 
-export function Panel({ ui, c, n, github, act, terminal, width, now, lang, editor }: Props) {
+export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Props) {
   const { Box, Button, Input, Select, Text } = ui
   const T = (key: Key, ...vars: (string | number)[]) => t(lang, key, ...vars)
   const index = c.index ?? []
@@ -133,17 +131,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang, edito
     <Box flexDirection="column">
       {title(T('find.title'), '#f2b84b')}
       <Text dimColor>{T('find.about')}</Text>
-      {editor ? (
-        <Box flexDirection="column" marginTop={1}>
-          {editor}
-          <Box marginTop={1} columnGap={1}>
-            <Button key="research-go" label={T('find.submit')} variant="primary" onPress={act.search} />
-            <Button key="research-clear" label={T('batch.clear')} plain onPress={act.clearDraft} />
-          </Box>
-        </Box>
-      ) : (
-        <Input key="research" placeholder={T('find.placeholder')} submitLabel={T('find.submit')} onSubmit={act.research} />
-      )}
+      <Input key="research" placeholder={T('find.placeholder')} submitLabel={T('find.submit')} onSubmit={act.research} />
       {c.hits && (
         <Box flexDirection="column" marginTop={1}>
           {c.hits.map(h => (

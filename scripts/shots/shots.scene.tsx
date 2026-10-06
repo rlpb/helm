@@ -86,10 +86,7 @@ for (const shot of SHOTS) {
     if (shot.sub) await ui.press({ key: shot.sub })
     if (shot.ask) await ui.input({ key: 'ask', text: shot.ask })
     if (shot.github) await ui.press({ key: 'gh' })
-    if (shot.research) {
-      await ui.post({ text: shot.research }, { in: 'research-editor' })
-      await ui.press({ key: 'research-go' })
-    }
+    if (shot.research) await ui.input({ key: 'research', text: shot.research })
     if (shot.tidy) await ui.press({ key: 'check' })
     if (shot.scan) await ui.press({ key: 'scan' })
     for (const key of shot.fold ?? []) await ui.press({ key })

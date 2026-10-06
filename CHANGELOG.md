@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-10-06
+
+### Changed
+
+- **The research box is the plain field again**, like the others in the panel: native caret and native paste. The custom text area of 0.12.1 could not take a paste and moved the text when its caret blinked.
+
 ## [0.12.2] - 2026-10-06
 
 ### Added
@@ -14,7 +20,6 @@ All notable changes are listed here. The format follows
 
 ### Changed
 
-- **The caret in the text area blinks**, so it is clear where typing goes.
 - **A copy switched off beside an active twin of the same name is listed once**, in the counts and in the tool list.
 
 ### Removed
@@ -268,7 +273,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.2...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.3...HEAD
+[0.12.3]: https://github.com/rlpb/helm/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/rlpb/helm/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/rlpb/helm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rlpb/helm/compare/v0.11.0...v0.12.0

@@ -73,8 +73,7 @@ describe('the scanner in the panel', () => {
     const w = world($, on, { run: github })
     await boot($, PROJECT)
     const ui = await pane($)
-    await ui.post({ text: 'demo/tool' }, { in: 'research-editor' })
-    await ui.press({ key: 'research-go' })
+    await ui.input({ key: 'research', text: 'demo/tool' })
     expect(await textOf(ui)).toContain('Looks fine')
     expect(w.ran.some(a => a[0] === 'skillspector' && a[2] === 'https://github.com/demo/tool')).toBe(true)
     expect(await ui.find({ key: 'install' })).toBeDefined()
@@ -84,8 +83,7 @@ describe('the scanner in the panel', () => {
     const w = world($, on, { run: github, scanner: 'missing' })
     await boot($, PROJECT)
     const ui = await pane($)
-    await ui.post({ text: 'demo/tool' }, { in: 'research-editor' })
-    await ui.press({ key: 'research-go' })
+    await ui.input({ key: 'research', text: 'demo/tool' })
     expect(await textOf(ui)).toContain('Check before you install')
     expect(await textOf(ui)).toContain('Not scanned')
     await ui.press({ key: 'scanner-install-found' })
@@ -99,8 +97,7 @@ describe('the scanner in the panel', () => {
     })
     await boot($, PROJECT)
     const ui = await pane($)
-    await ui.post({ text: 'demo/tool' }, { in: 'research-editor' })
-    await ui.press({ key: 'research-go' })
+    await ui.input({ key: 'research', text: 'demo/tool' })
     expect(await textOf(ui)).toContain('Do not install')
     expect(await textOf(ui)).toContain('External Script Fetching')
     expect(await ui.find({ key: 'install' })).toBeUndefined()
@@ -114,8 +111,7 @@ describe('the scanner in the panel', () => {
     world($, on, { run: github, scanner: () => report('DO_NOT_INSTALL', 90, [{ severity: 'HIGH', pattern: 'Credential Access', file: 'tests/a.ts' }]) })
     await boot($, PROJECT)
     const ui = await pane($)
-    await ui.post({ text: 'demo/tool' }, { in: 'research-editor' })
-    await ui.press({ key: 'research-go' })
+    await ui.input({ key: 'research', text: 'demo/tool' })
     expect(await textOf(ui)).toContain('only in tests or docs')
     expect(await ui.find({ key: 'install' })).toBeDefined()
   })
@@ -182,5 +178,19 @@ describe('what counts as flagged', () => {
     const scans = { 'skill:a': mk(1, 0), 'skill:b': mk(0, 1), 'skill:c': mk(0, 0, 'SAFE'), 'skill:d': mk(0, 4) }
     expect(flagged(scans).map(([k]) => k).sort()).toEqual(['skill:a', 'skill:d'])
     expect(watched(scans)).toBe(1)
+  })
+})
+
+describe('what counts toward a verdict', () => {
+  test('findings in CI config, evaluation scripts and install notes do not make a tool risky', () => {
+    const issue = (severity: string, file: string) => ({ severity, pattern: 'p', location: { file, start_line: 1 } })
+    const scan = parseScan(
+      JSON.stringify({
+        risk_assessment: { score: 100, severity: 'CRITICAL', recommendation: 'DO_NOT_INSTALL' },
+        issues: [...['.github/workflows/a.yml', 'INSTALL.md', 'evals/run.py', '.opencode/x.ts', 'README.md'].map(f => issue('HIGH', f)), issue('MEDIUM', 'scripts/run.py')],
+      }),
+    )!
+    expect(scan.flagged).toBe(1)
+    expect(blocks(scan)).toBe(false)
   })
 })
