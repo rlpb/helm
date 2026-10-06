@@ -338,9 +338,11 @@ export const register: Register = on => {
             {c.setup.on && (
               <Box flexDirection="column">
                 <Button key="license" label={`License: ${c.setup.license} (change)`} onPress={() => setSetup($, s => ({ ...s, license: nextLicense(s.license) }))} />
-                {ITEMS.map(i => (
-                  <Button key={`i-${i.id}`} label={`${c.setup.items.includes(i.id) ? '[x]' : '[ ]'} ${i.label}`} onPress={() => setSetup($, toggleItem(i.id))} />
-                ))}
+                <Box flexDirection="row" flexWrap="wrap" columnGap={1}>
+                  {ITEMS.map(i => (
+                    <Button key={`i-${i.id}`} label={`${c.setup.items.includes(i.id) ? '[x]' : '[ ]'} ${i.label}`} onPress={() => setSetup($, toggleItem(i.id))} />
+                  ))}
+                </Box>
                 <Input
                   key="details"
                   label="Details: "
@@ -366,7 +368,7 @@ export const register: Register = on => {
                 </Text>
               ) : null
             })}
-            {c.ask.picks.length > 0 && (
+            {c.ask.picks.some(k => (c.index ?? []).some(x => x.key === k && !x.on)) && (
               <Box>
                 <Button key="here" label="Turn on for this project" onPress={() => turnOnHere($)} />
                 <Text> </Text>
@@ -433,7 +435,7 @@ export const register: Register = on => {
         )}
         <Input key="research" label="Find a tool: " placeholder="GitHub link, owner/name, or a name" submitLabel="look" onSubmit={text => research($, text)} />
         {c.message && <Text dimColor>{c.message}</Text>}
-        {(n.tab === 'global' || !c.ask) &&
+        {(n.tab === 'global' || !(c.ask || c.found || c.hits)) &&
           rows.map(r => (
             <Text key={r.category}>
               {`${r.category}: ${r.on}/${r.total}`}

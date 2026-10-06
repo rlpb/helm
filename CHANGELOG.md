@@ -6,6 +6,17 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-06
+
+### Changed
+
+- The GitHub items sit in one wrapped row instead of one per line, and the category counts hide while a shortlist, a verdict or search results are shown.
+- "Turn on for this project" appears only when a shortlisted tool is still off.
+
+### Added
+
+- Screenshots of the real panel in the README, drawn from made-up data by `scripts/shots.mjs`.
+
 ## [0.1.0] - 2026-10-06
 
 First release.
@@ -30,5 +41,6 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/rlpb/helm/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rlpb/helm/releases/tag/v0.1.0

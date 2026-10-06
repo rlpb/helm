@@ -25,6 +25,11 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 - **Start a repository properly.** When a GitHub connector is available, one checkbox adds a professional GitHub baseline to your first prompt: pick a license and the items you want (README, CI, `SECURITY.md`, Dependabot, branch protection and more), add your own directions, and it is remembered.
 
 <div align="center">
+<img src="docs/screenshot-band.png" alt="The notice in a new folder" width="560"><br>
+<img src="docs/screenshot-project.png" alt="The Project tab: a shortlist and the GitHub baseline" width="420"> <img src="docs/screenshot-research.png" alt="A verdict on a repository before installing" width="420">
+</div>
+
+<div align="center">
 <img src="docs/map.svg" alt="The Map tab: a hub per category with a dot per skill, three of them lit" width="560">
 </div>
 
@@ -54,7 +59,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.1.0.zip --repo rlpb/helm
+gh attestation verify helm-0.1.1.zip --repo rlpb/helm
 ```
 
 ## Support

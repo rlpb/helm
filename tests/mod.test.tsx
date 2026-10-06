@@ -39,8 +39,8 @@ test('describing the project shortlists the fitting tools, and one press turns t
   await ui.input({ key: 'ask', text: 'a report with citations' })
   const text = await textOf(ui)
   expect(text).toContain('Report writer')
-  await ui.press({ key: 'here' })
-  await ui.press({ key: 'undo' })
+  // Everything that fits is already on, so there is nothing to turn on.
+  expect(await ui.find({ key: 'here' })).toBeUndefined()
   // The global settings file is never touched.
   expect(JSON.parse(w.files.get(`${BASE}/settings.json`)!).enabledPlugins).toEqual({ 'tdd@m': true, 'seo@m': false })
 })

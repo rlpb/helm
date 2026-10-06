@@ -25,6 +25,11 @@ Ogni settimana escono nuovi plugin, skill e strumenti. Helm è il posto in Claud
 - **Avvia bene un repository.** Se è disponibile un connettore GitHub, una casella aggiunge al tuo primo prompt una base professionale per GitHub: scegli la licenza e le voci che vuoi (README, CI, `SECURITY.md`, Dependabot, protezione del ramo e altro), aggiungi le tue indicazioni, e resta memorizzato.
 
 <div align="center">
+<img src="docs/screenshot-band.png" alt="L'avviso in una cartella nuova" width="560"><br>
+<img src="docs/screenshot-project.png" alt="La scheda Project: una selezione e la base GitHub" width="420"> <img src="docs/screenshot-research.png" alt="Un verdetto su un repository prima di installare" width="420">
+</div>
+
+<div align="center">
 <img src="docs/map.svg" alt="La scheda Map: un nodo per categoria con un punto per skill, tre accesi" width="560">
 </div>
 
@@ -54,7 +59,7 @@ Le release sono costruite dal workflow di release a partire da un commit con tag
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.1.0.zip --repo rlpb/helm
+gh attestation verify helm-0.1.1.zip --repo rlpb/helm
 ```
 
 ## Supporto
