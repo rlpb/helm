@@ -6,6 +6,16 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-06
+
+### Added
+
+- **A security dot above the prompt:** green when the last scan was clean, amber for cautions, red for a "do not install", dim when nothing was scanned yet. Next to it, **Security** (with the number flagged) opens the Global tab.
+
+### Changed
+
+- **Scan skills** no longer scans a folder that did not change since its last scan, so the second run is fast. The results are kept between sessions.
+
 ## [0.6.0] - 2026-10-06
 
 ### Added
@@ -86,7 +96,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/rlpb/helm/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rlpb/helm/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rlpb/helm/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rlpb/helm/compare/v0.3.0...v0.4.0

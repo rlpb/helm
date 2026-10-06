@@ -2,6 +2,7 @@
 // itself, and otherwise a quiet line that shows the project, the limits and the skill in use.
 
 import { COLOR } from '../graph'
+import { flagged } from '../skillspector'
 import { t } from '../i18n'
 import type { Lang } from '../i18n'
 import type { Core } from '../../types'
@@ -13,6 +14,7 @@ export type BandAct = {
   dismiss: (key: string) => void
   start: () => void
   skip: () => void
+  security: () => void
 }
 
 type Props = { ui: any; c: Core; lang: Lang; act: BandAct; terminal: boolean; width: number; litName?: string; litCat?: string }
@@ -57,6 +59,10 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
     u?.week != null && { id: 'week', label: t(lang, 'meter.week'), pct: u.week },
     u?.ctx != null && width >= 120 && { id: 'ctx', label: t(lang, 'meter.context'), pct: u.ctx },
   ].filter(Boolean) as { id: string; label: string; pct: number }[]
+  // The security dot: green when the last scan was clean, amber for cautions, red for a "do not install", dim when nothing was scanned yet.
+  const found = flagged(c.scans)
+  const scanned = Object.keys(c.scans).length > 0
+  const shield = !scanned ? 'inactive' : found.some(([, s]) => s.recommendation === 'DO_NOT_INSTALL') ? 'error' : found.length > 0 ? 'warning' : 'success'
   const dot = litCat ? `#${(COLOR[litCat] ?? COLOR.other).toString(16).padStart(6, '0')}` : '#6fd08c'
 
   return (
@@ -69,6 +75,10 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
           <Text dimColor>{c.project ? `${c.project.name}  ·  ${active}/${index.length}` : t(lang, 'head.none')}</Text>
         </Box>
         {meters.map(m => Meter({ ui, terminal, id: m.id, label: m.label, pct: m.pct }))}
+        <Box>
+          <Text color={shield}>●</Text>
+          <Button key="helm-security" label={found.length > 0 ? `${t(lang, 'sec.title')} ${found.length}` : t(lang, 'sec.title')} plain onPress={act.security} />
+        </Box>
         {litName && <Text color={dot}>{`●  ${litName}`}</Text>}
       </Box>
       <Button key="helm-open" label={t(lang, 'band.openHelm')} onPress={act.open} />

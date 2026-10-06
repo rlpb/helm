@@ -367,19 +367,38 @@ async function updateScanner($: any, quiet = false) {
   }
 }
 
-/** Scans every installed plugin and own skill, one after the other, and keeps the results. */
+/** What identifies the state of a folder: its top-level names, sizes and times. A plugin's path already holds its version. */
+async function fingerprint($: any, path: string): Promise<string> {
+  const entries = await $.fs.list(path).catch(() => [])
+  return [path, ...entries.map((e: any) => `${e.name}:${e.size}:${e.mtimeMs}`)].join('|')
+}
+
+/** Scans every installed plugin and own skill, one after the other, and keeps the results. A folder that did not change since its last scan is not scanned again. */
 async function runScan($: any) {
   const c = await read($, core)
   if (c.scanner.state !== 'ready') return
   const targets = await scanTargets(disk($), c.dir, c.index ?? [])
+  const known = ((await $.store.get('scan-fps')) as Record<string, string> | undefined) ?? {}
+  const fps: Record<string, string> = {}
   const scans: Record<string, ScanResult> = {}
   for (const [i, target] of targets.entries()) {
     await update($, core, s => ({ ...s, scanning: { done: i, total: targets.length }, message: null }))
+    const fp = await fingerprint($, target.path)
+    const before = c.scans[target.key]
+    if (before && known[target.key] === fp) {
+      scans[target.key] = before
+      fps[target.key] = fp
+      continue
+    }
     const result = await scanOne($, target.path)
-    if (result) scans[target.key] = result
+    if (result) {
+      scans[target.key] = result
+      fps[target.key] = fp
+    }
   }
   const bad = Object.values(scans).filter(s => s.recommendation !== 'SAFE' && s.flagged > 0).length
   await $.store.set('scans', scans)
+  await $.store.set('scan-fps', fps)
   await update($, core, s => ({ ...s, scans, scanning: null, message: t(c.lang, 'msg.scanDone', targets.length, bad) }))
 }
 
@@ -529,6 +548,10 @@ export const register: Register = on => {
         void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
       },
       skip: () => void setState($, 'declined'),
+      security: () => {
+        void update($, nav, s => ({ ...s, tab: 'global' }))
+        void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
+      },
     }
     return Band({ ui, c, lang: c.lang, act, terminal: e.surface === 'terminal', width: e.props.bodyColumns ?? 100, litName: litEntry?.name, litCat: litEntry?.category })
   })
