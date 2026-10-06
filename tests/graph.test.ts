@@ -49,8 +49,8 @@ describe('the map', () => {
     const lay = layout(INDEX)
     const whole = svg(lay, {}, 0)
     const near = svg(lay, {}, 0, { zoom: 'build' })
-    expect(whole).toContain('viewBox="0 0 1000 600"')
-    expect(near).not.toContain('viewBox="0 0 1000 600"')
+    expect(whole).toContain(`viewBox="0 0 ${lay.w} ${lay.h}"`)
+    expect(near).not.toContain(`viewBox="0 0 ${lay.w} ${lay.h}"`)
     expect(near).toContain('style="background:#0e1016"')
   })
 

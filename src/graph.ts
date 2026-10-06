@@ -5,14 +5,15 @@
 
 import type { Entry } from '../types'
 
-export const W = 1000
-export const H = 600
+// The size the terminal grid and a first drawing use; the SVG is laid out for the width the panel really has.
+export const W = 760
+export const H = 456
 /** How long a used tool glows, in milliseconds. */
 export const GLOW_MS = 6000
 
 export type Node = { key: string; cat: string; x: number; y: number; hub: boolean; label: string; on: boolean; /** What the tool does, for the card on hover. */ desc?: string; /** How far its dots reach, so the label can sit clear of them. */ reach?: number }
 export type Edge = { from: [number, number]; to: [number, number]; cat: string }
-export type Layout = { nodes: Node[]; edges: Edge[] }
+export type Layout = { nodes: Node[]; edges: Edge[]; w: number; h: number }
 
 // One color per category, bright enough for a dark background.
 export const COLOR: Record<string, number> = {
@@ -31,7 +32,7 @@ const color = (cat: string) => COLOR[cat] ?? COLOR.other
 const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`
 
 /** Hubs on an ellipse around the middle; each category's tools in a ring (or a spiral) around its hub. */
-export function layout(index: Entry[]): Layout {
+export function layout(index: Entry[], w = W, h = H): Layout {
   const groups = new Map<string, Entry[]>()
   for (const e of index) groups.set(e.category, [...(groups.get(e.category) ?? []), e])
   const bySize = [...groups.keys()].sort((a, b) => groups.get(b)!.length - groups.get(a)!.length || a.localeCompare(b))
@@ -43,21 +44,21 @@ export function layout(index: Entry[]): Layout {
   }
   const nodes: Node[] = []
   const edges: Edge[] = []
-  const cx = W / 2
-  const cy = H / 2
-  // Everything that is measured in pixels grows with the canvas.
-  const k = W / 830
-  const reachOf = (cat: string) => (22 + Math.floor(Math.sqrt((groups.get(cat)!.length - 1) / 4)) * 15) * k
-  const room = cats.map(cat => Math.max(2 * reachOf(cat), 90 * k) + 26 * k)
+  const cx = w / 2
+  const cy = h / 2
+  // Sizes are real pixels: the picture is drawn 1:1 in the space the panel has, so type and dots keep their size.
+  const k = 1
+  const reachOf = (cat: string) => (20 + Math.floor(Math.sqrt((groups.get(cat)!.length - 1) / 4)) * 17) * k
+  const room = cats.map(cat => Math.max(2 * reachOf(cat), 80 * k) + 22 * k)
   const sum = room.reduce((x, y) => x + y, 0)
   let used = 0
   cats.forEach((cat, i) => {
     const angle = ((used + room[i] / 2) / sum) * Math.PI * 2 - Math.PI / 2
     used += room[i]
-    const hx = cx + Math.cos(angle) * (W * 0.355)
-    const hy = cy + Math.sin(angle) * (H * 0.34)
+    const hx = cx + Math.cos(angle) * (w * 0.37)
+    const hy = cy + Math.sin(angle) * (h * 0.36)
     const rings = Math.floor(Math.sqrt((groups.get(cat)!.length - 1) / 4))
-    nodes.push({ key: `hub:${cat}`, cat, x: hx, y: hy, hub: true, label: cat, on: true, reach: (22 + rings * 15) * k })
+    nodes.push({ key: `hub:${cat}`, cat, x: hx, y: hy, hub: true, label: cat, on: true, reach: (20 + rings * 17) * k })
     edges.push({ from: [cx, cy], to: [hx, hy], cat })
     const list = groups.get(cat)!
     list.forEach((e, j) => {
@@ -66,11 +67,11 @@ export function layout(index: Entry[]): Layout {
       const first = 4 * ring * ring
       const inRing = 4 * (ring + 1) * (ring + 1) - first
       const a = ((j - first) / inRing) * Math.PI * 2 + angle
-      const r = (22 + ring * 15) * k
+      const r = (20 + ring * 17) * k
       nodes.push({ key: e.key, cat, x: hx + Math.cos(a) * r, y: hy + Math.sin(a) * r, hub: false, label: e.name, on: e.on, desc: e.description })
     })
   })
-  return { nodes, edges }
+  return { nodes, edges, w, h }
 }
 
 /** How lit a tool is, 0 (dark) to 1 (just used). */
@@ -118,12 +119,14 @@ export type Opts = {
 }
 
 export function svg(lay: Layout, used: Record<string, number>, now: number, opts: Opts = {}): string {
+  const W = lay.w
+  const H = lay.h
   const BG = '#0e1016'
   const total = new Map<string, { n: number; on: number }>()
   for (const n of lay.nodes) if (!n.hub) total.set(n.cat, { n: (total.get(n.cat)?.n ?? 0) + 1, on: (total.get(n.cat)?.on ?? 0) + (n.on ? 1 : 0) })
   const states = opts.states ?? { on: 'on', off: 'off' }
   const focus = opts.zoom ? lay.nodes.find(n => n.hub && n.cat === opts.zoom) : undefined
-  const Z = focus ? 2.8 : 1
+  const Z = focus ? 2.4 : 1
   const view = focus ? `${(focus.x - W / Z / 2).toFixed(0)} ${(focus.y - H / Z / 2).toFixed(0)} ${(W / Z).toFixed(0)} ${(H / Z).toFixed(0)}` : `0 0 ${W} ${H}`
   const dots = lay.nodes.filter(n => !n.hub)
 
@@ -140,11 +143,11 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
       '<defs><radialGradient id="bg" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#1c2236"/><stop offset="1" stop-color="#0e1016" stop-opacity="0"/></radialGradient></defs>' +
         `<rect width="${W}" height="${H}" fill="url(#bg)"/>`,
     )
-    for (const r of [110, 210, 310]) out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="${r}" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>`)
+    for (const r of [0.11, 0.21, 0.31].map(f => f * W)) out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="${r}" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>`)
     // A slow ripple from the middle, so the picture is never still.
     for (const begin of [0, 2.5, 5]) {
       out.push(
-        `<circle cx="${W / 2}" cy="${H / 2}" r="20" fill="none" stroke="#8fb4ff" stroke-opacity="0"><animate attributeName="r" values="20;330" dur="7.5s" begin="${begin}s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="0.22;0" dur="7.5s" begin="${begin}s" repeatCount="indefinite"/></circle>`,
+        `<circle cx="${W / 2}" cy="${H / 2}" r="20" fill="none" stroke="#8fb4ff" stroke-opacity="0"><animate attributeName="r" values="20;${(W * 0.33).toFixed(0)}" dur="7.5s" begin="${begin}s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="0.22;0" dur="7.5s" begin="${begin}s" repeatCount="indefinite"/></circle>`,
       )
     }
     for (const e of lay.edges) {
@@ -250,6 +253,8 @@ const mix = (rgb: number, k: number): number => {
 
 /** The map as terminal cells: `columns x rows`, packed as `RasterProps.cells` wants. */
 export function cells(lay: Layout, used: Record<string, number>, now: number, columns: number, rows: number, opts: Opts = {}): string {
+  const W = lay.w
+  const H = lay.h
   const grid = Array.from({ length: columns * rows }, () => ({ ch: 0x20, fg: 0x01000000 }))
   const put = (x: number, y: number, ch: number, fg: number) => {
     const cx = Math.round((x / W) * (columns - 1))

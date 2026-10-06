@@ -6,6 +6,13 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-10-06
+
+### Changed
+
+- **The Map is drawn for the window it is in.** It was laid out on a fixed canvas and then shrunk to fit, which made the type and the dots about 25% too small to read. The picture is now laid out in real pixels for the width the panel has (a column is about 9 pixels), so names and dots keep their size, and it is laid out again when the panel is widened or opened full screen.
+- **One quiet picker instead of eleven buttons.** The row of category buttons above the map is gone; a single **Zoom** menu next to the hint picks the whole map or one category.
+
 ## [0.9.3] - 2026-10-06
 
 ### Changed
@@ -181,7 +188,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.4...HEAD
+[0.9.4]: https://github.com/rlpb/helm/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/rlpb/helm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/rlpb/helm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/rlpb/helm/compare/v0.9.0...v0.9.1

@@ -13,7 +13,7 @@ import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
   tab: (tab: Nav['tab']) => void
-  zoom: (cat: string | null) => void
+  zoom: (cat: string) => void
   fold: (cat: string) => void
   foldAll: (cats: string[]) => void
   inspect: (key: string) => void
@@ -463,14 +463,16 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
   // ---- Map: only the picture; what each dot is shows on hover, inside the picture ----
   const mapTab = (
     <Box flexDirection="column">
-      <Box flexDirection="row" flexWrap="wrap" columnGap={1} marginTop={1}>
-        <Button key="zoom-all" label={T('map.all')} variant={n.zoom === null ? 'primary' : 'secondary'} onPress={() => act.zoom(null)} />
-        {byCategory.map(r => (
-          <Button key={`zoom-${r.category}`} label={`● ${T(`cat.${r.category}` as Key)}`} variant={n.zoom === r.category ? 'primary' : 'secondary'} onPress={() => act.zoom(r.category)} />
-        ))}
+      <Box marginTop={1} justifyContent="space-between">
+        <Text dimColor>{T('map.hint')}</Text>
+        <Select
+          key="zoom"
+          value={n.zoom ?? 'all'}
+          options={[{ value: 'all', label: T('map.all') }, ...byCategory.map(r => ({ value: r.category, label: T(`cat.${r.category}` as Key) }))]}
+          onSelect={act.zoom}
+        />
       </Box>
       <Box marginTop={1}>{map}</Box>
-      <Text dimColor>{T('map.hint')}</Text>
     </Box>
   )
 

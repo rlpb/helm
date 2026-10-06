@@ -649,7 +649,7 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
-      zoom: (cat: string | null) => void update($, nav, s => ({ ...s, zoom: cat })),
+      zoom: (cat: string) => void update($, nav, s => ({ ...s, zoom: cat === 'all' ? null : cat })),
       fold: (cat: string) => void update($, nav, s => ({ ...s, open: (s.open ?? []).includes(cat) ? s.open.filter(x => x !== cat) : [...(s.open ?? []), cat] })),
       foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: (s.open ?? []).length > 0 ? [] : cats })),
       inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: s.inspect === key ? null : key })),
@@ -677,7 +677,9 @@ export const register: Register = on => {
     try {
       let map: any = null
       if (n.tab === 'graph') {
-        const lay = layout(c.index ?? [])
+        // The picture is as wide as the panel (a column is about 9 pixels), so it fills the window and follows it when it grows.
+        const pw = terminal ? 760 : Math.max(560, Math.min(1200, Math.round((e.props.bodyColumns ?? 80) * 9)))
+        const lay = layout(c.index ?? [], pw, Math.round(pw * 0.62))
         const opts = {
           label: (cat: string) => t(c.lang, `cat.${cat}` as Key),
           uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])),
@@ -688,7 +690,7 @@ export const register: Register = on => {
         map = terminal ? (
           <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
         ) : (
-          <ui.Svg source={svg(lay, c.used, now, { ...opts, zoom: n.zoom })} alt="Map of installed tools, lit when used" width={740} height={444} isInteractive />
+          <ui.Svg source={svg(lay, c.used, now, { ...opts, zoom: n.zoom })} alt="Map of installed tools, lit when used" width={lay.w} height={lay.h} isInteractive />
         )
       }
       return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
