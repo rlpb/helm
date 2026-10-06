@@ -142,6 +142,7 @@ export const zh: Dict = {
   'batch.unsupported': '不是 GitHub 链接：暂不支持',
   'batch.matched': '按名称匹配：{0}',
   'batch.installed': '已安装',
+  'batch.have': '已经安装',
   'batch.failed': '安装失败',
   'msg.batchLooking': '正在检查 {0}/{1}…',
   'msg.batchChecked': '已检查 {0} 个：{1} 个可安装。',

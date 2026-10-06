@@ -142,6 +142,7 @@ export const nl: Dict = {
   'batch.unsupported': 'Geen GitHub-link: nog niet ondersteund',
   'batch.matched': 'op naam gevonden: {0}',
   'batch.installed': 'geïnstalleerd',
+  'batch.have': 'Al geïnstalleerd',
   'batch.failed': 'installeren mislukt',
   'msg.batchLooking': '{0} van {1} controleren…',
   'msg.batchChecked': '{0} gecontroleerd: {1} klaar om te installeren.',

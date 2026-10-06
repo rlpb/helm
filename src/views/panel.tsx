@@ -27,6 +27,8 @@ export type Act = {
   item: (id: string) => void
   details: (text: string) => void
   research: (text: string) => void
+  search: () => void
+  clearDraft: () => void
   pickRow: (i: number) => void
   installBatch: (scope: 'user' | 'local') => void
   clearBatch: () => void
@@ -42,7 +44,7 @@ export type Act = {
   anyway: (scope: 'user' | 'local') => void
 }
 
-type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; now: number; lang: Lang }
+type Props = { ui: any; c: Core; n: Nav; github: boolean; act: Act; terminal: boolean; width: number; now: number; lang: Lang; editor: any }
 
 const LEVEL = { ok: 'success', caution: 'warning', no: 'error' } as const
 const WHY: Record<string, Key> = {
@@ -71,7 +73,7 @@ export function ago(ms: number): string {
   return `${Math.round(s / 86400)}d`
 }
 
-export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Props) {
+export function Panel({ ui, c, n, github, act, terminal, width, now, lang, editor }: Props) {
   const { Box, Button, Input, Select, Text } = ui
   const T = (key: Key, ...vars: (string | number)[]) => t(lang, key, ...vars)
   const index = c.index ?? []
@@ -129,7 +131,17 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
     <Box flexDirection="column">
       {title(T('find.title'), '#f2b84b')}
       <Text dimColor>{T('find.about')}</Text>
-      <Input key="research" placeholder={T('find.placeholder')} submitLabel={T('find.submit')} onSubmit={act.research} />
+      {editor ? (
+        <Box flexDirection="column" marginTop={1}>
+          {editor}
+          <Box marginTop={1} columnGap={1}>
+            <Button key="research-go" label={T('find.submit')} variant="primary" onPress={act.search} />
+            <Button key="research-clear" label={T('batch.clear')} plain onPress={act.clearDraft} />
+          </Box>
+        </Box>
+      ) : (
+        <Input key="research" placeholder={T('find.placeholder')} submitLabel={T('find.submit')} onSubmit={act.research} />
+      )}
       {c.hits && (
         <Box flexDirection="column" marginTop={1}>
           {c.hits.map(h => (
@@ -146,21 +158,21 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
           {c.batch.map((row, i) => {
             const f = row.found
             const level = f?.verdict.level
-            const color = row.state === 'installed' ? 'success' : row.state === 'failed' ? 'error' : row.state === 'wait' || row.state === 'check' ? 'suggestion' : row.state === 'missing' || row.state === 'unsupported' ? 'inactive' : level ? LEVEL[level] : 'inactive'
-            const mark = row.state === 'installed' ? '✓' : row.state === 'failed' ? '✗' : row.state === 'wait' || row.state === 'check' ? '◌' : row.state === 'missing' || row.state === 'unsupported' ? '?' : level === 'ok' ? '●' : level === 'caution' ? '▲' : '✗'
+            // Not a skill or a plugin at all is not a danger: it is greyed, not red.
+            const other = row.state === 'done' && !!f && level === 'no' && f.verdict.reasons.every(r => r.k === 'noform')
+            const color = row.state === 'installed' || row.state === 'have' ? 'success' : row.state === 'failed' ? 'error' : row.state === 'wait' || row.state === 'check' ? 'suggestion' : row.state === 'missing' || row.state === 'unsupported' || other ? 'inactive' : level ? LEVEL[level] : 'inactive'
+            const mark = row.state === 'installed' || row.state === 'have' ? '✓' : row.state === 'failed' ? '✗' : row.state === 'wait' || row.state === 'check' ? '◌' : row.state === 'missing' || row.state === 'unsupported' ? '?' : other ? '–' : level === 'ok' ? '●' : level === 'caution' ? '▲' : '✗'
             const ready = row.state === 'done' && !!f && level !== 'no'
-            const note =
-              row.state === 'wait' || row.state === 'check'
-                ? T('batch.checking')
-                : row.state === 'missing'
-                  ? T('batch.missing')
-                  : row.state === 'unsupported'
-                    ? T('batch.unsupported')
-                    : row.state === 'installed'
-                      ? T('batch.installed')
-                      : row.state === 'failed'
-                        ? `${T('batch.failed')}${row.why ? `: ${row.why}` : ''}`
-                        : [T(level === 'ok' ? 'verdict.ok' : level === 'caution' ? 'verdict.caution' : 'verdict.no'), ...(f?.verdict.reasons ?? []).map(r => T(WHY[r.k], r.n ?? 0)), ...(row.via ? [T('batch.matched', row.via)] : [])].join(' · ')
+            const note = (() => {
+              if (row.state === 'wait' || row.state === 'check') return T('batch.checking')
+              if (row.state === 'have') return T('batch.have')
+              if (other) return T('why.noform')
+              if (row.state === 'missing') return T('batch.missing')
+              if (row.state === 'unsupported') return T('batch.unsupported')
+              if (row.state === 'installed') return T('batch.installed')
+              if (row.state === 'failed') return `${T('batch.failed')}${row.why ? `: ${row.why}` : ''}`
+              return [T(level === 'ok' ? 'verdict.ok' : level === 'caution' ? 'verdict.caution' : 'verdict.no'), ...(f?.verdict.reasons ?? []).map(r => T(WHY[r.k], r.n ?? 0)), ...(row.via ? [T('batch.matched', row.via)] : [])].join(' · ')
+            })()
             return (
               <Box key={`b-${i}`} flexDirection="column" marginTop={1}>
                 <Box columnGap={1}>

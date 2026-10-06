@@ -6,6 +6,18 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-06
+
+### Added
+
+- **A real text area in "Find a new tool".** It wraps, grows with what you paste or type, and keeps line breaks, so a list with one name per line is read as a list. Enter adds a line, **Ctrl+Enter** or the search button looks, Clear empties it. Surfaces without a `Client` element keep the one-line field.
+- **"Already installed".** A name in a pasted list that matches something you already have is marked as such and is not looked up or scanned again.
+
+### Changed
+
+- **A repository that is no skill or plugin is greyed, not red.** "Nothing Helm can install here" is not a danger, so it no longer reads as "do not install".
+- **The scan ignores what Claude never loads.** Findings in CI config (`.github`), evaluation harnesses, editor config, and the repository's own README and install notes no longer count toward a verdict. A known-good skill that scored 100/100 because of its CI files now scores on its real files.
+
 ## [0.12.0] - 2026-10-06
 
 ### Added
@@ -241,7 +253,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/rlpb/helm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rlpb/helm/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/rlpb/helm/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/rlpb/helm/compare/v0.10.0...v0.10.1

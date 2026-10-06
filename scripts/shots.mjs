@@ -140,6 +140,12 @@ function block(node, cols) {
     }
     case 'Input':
       return [[{ t: '› ', fg: COLORS.claude, bold: true }, { t: p.placeholder ?? '', fg: DIM }, { t: `   ${p.submitLabel ?? 'send'} ↵`, fg: DIM }]]
+    case 'Client': {
+      // The text area of the research box: a bordered box holding the draft, or the placeholder.
+      const draft = p.props?.start ?? ''
+      const text = draft ? `${draft}▏` : `▏${p.props?.placeholder ?? ''}`
+      return block({ type: 'Box', props: { flexDirection: 'column', borderStyle: 'round', paddingX: 1 }, children: [{ type: 'Text', props: { dimColor: !draft }, children: [text] }] }, cols)
+    }
     case 'Select': {
       const option = (p.options ?? []).find(o => o.value === p.value)
       return [[...(p.label ? [{ t: p.label, fg: DIM }] : []), { t: `${option?.label ?? p.value} ▾`, fg: COLORS.suggestion }]]

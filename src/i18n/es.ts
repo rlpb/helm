@@ -142,6 +142,7 @@ export const es: Dict = {
   'batch.unsupported': 'No es un enlace de GitHub: aún no compatible',
   'batch.matched': 'encontrado por nombre: {0}',
   'batch.installed': 'instalado',
+  'batch.have': 'Ya instalado',
   'batch.failed': 'no se pudo instalar',
   'msg.batchLooking': 'Comprobando {0} de {1}…',
   'msg.batchChecked': 'Comprobados {0}: {1} listos para instalar.',

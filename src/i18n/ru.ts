@@ -142,6 +142,7 @@ export const ru: Dict = {
   'batch.unsupported': 'Не ссылка GitHub: пока не поддерживается',
   'batch.matched': 'найдено по имени: {0}',
   'batch.installed': 'установлено',
+  'batch.have': 'Уже установлено',
   'batch.failed': 'не удалось установить',
   'msg.batchLooking': 'Проверяю {0} из {1}…',
   'msg.batchChecked': 'Проверено {0}: готово к установке {1}.',

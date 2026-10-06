@@ -142,6 +142,7 @@ export const ko: Dict = {
   'batch.unsupported': 'GitHub 링크가 아님: 아직 지원하지 않음',
   'batch.matched': '이름으로 일치: {0}',
   'batch.installed': '설치됨',
+  'batch.have': '이미 설치됨',
   'batch.failed': '설치하지 못했습니다',
   'msg.batchLooking': '{1}개 중 {0}개 확인 중…',
   'msg.batchChecked': '{0}개 확인: {1}개 설치 가능.',

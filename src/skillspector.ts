@@ -19,8 +19,9 @@ export const repoTarget = (repo: string): string | null => (REPO.test(repo) ? `h
 /** `SkillSpector v2.12.0` -> `2.12.0`; null when it is not SkillSpector answering. */
 export const parseVersion = (text: string): string | null => text.match(/SkillSpector\s+v?(\d+(?:\.\d+)*)/i)?.[1] ?? null
 
-// A finding in a test, a doc or an example does not decide whether a tool is safe to install.
-const SIDE = /(^|\/)(tests?|__tests__|docs?|examples?|fixtures?)\//i
+// A finding in a test, a doc, an example, an evaluation harness, CI or editor config, or the repository's
+// own readme and install notes is not what Claude loads, so it does not decide whether a tool is safe to install.
+const SIDE = /(^|\/)(tests?|__tests__|docs?|examples?|fixtures?|evals?|benchmarks?|\.github|\.gitlab|\.opencode|\.cursor|\.vscode|\.devcontainer)\/|^(readme|install|installation|contributing|changelog|security|code_of_conduct|license|notice)[^/]*\.(md|txt)$/i
 const TESTISH = /\.(test|spec)\.[a-z]+$/i
 const isSide = (file: string): boolean => SIDE.test(file.replace(/\\/g, '/')) || TESTISH.test(file)
 

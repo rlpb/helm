@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { BatchRow, Core, Found, Hit, Meta, Nav, ProjectState, ScanResult, Setup } from '../types'
-import { installPlan, judge, parseItems } from '../src/research'
+import { installPlan, installedAs, judge, parseItems } from '../src/research'
 import type { Item } from '../src/research'
 import { loadIndex, scanTargets } from '../src/load'
 import { shortlist } from '../src/shortlist'
@@ -22,6 +22,9 @@ import { Panel, ago } from '../src/views/panel'
 
 const PANE = 'helm'
 let isTerminal = false
+// What the text area of the research box holds (it posts every change), and how often "Clear" was pressed.
+let draft = ''
+let cleared = 0
 let fading = false
 
 const core = atom(
@@ -472,6 +475,13 @@ async function runBatch($: any, items: Item[]) {
         done += 1
         continue
       }
+      // Something already installed under this name is not looked up, scanned or offered again.
+      const have = installedAs(c.index ?? [], it.kind === 'repo' ? it.repo.split('/')[1] : it.query)
+      if (have) {
+        await setRow($, i, { state: 'have', via: have.name })
+        done += 1
+        continue
+      }
       await setRow($, i, { state: 'check' })
       let found: Found | null = null
       let via: string | undefined
@@ -849,6 +859,15 @@ export const register: Register = on => {
     return next({ ...e, text: `${e.text}\n\n${text}` })
   })
 
+  // The text area posts its whole text on every change; Ctrl+Enter inside it searches.
+  on('ui.message', async ($, e, next) => {
+    if (e.element !== 'research-editor') return next(e)
+    const d = e.data as { text?: unknown; submit?: unknown } | null
+    if (typeof d?.text === 'string') draft = d.text.slice(0, 20_000)
+    if (d?.submit === true) void research($, draft)
+    return {}
+  })
+
   on('command.run', { command: 'helm' }, async $ => {
     await $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
     return { text: 'Helm opened.' }
@@ -906,6 +925,12 @@ export const register: Register = on => {
       item: (id: string) => void setSetup($, toggleItem(id)),
       details: (text: string) => void setSetup($, s => ({ ...s, details: text })),
       research: (text: string) => void research($, text),
+      search: () => void research($, draft),
+      clearDraft: () => {
+        draft = ''
+        cleared += 1
+        void update($, nav, s => ({ ...s }))
+      },
       pickRow: (i: number) => void update($, core, s => ({ ...s, batch: s.batch ? s.batch.map((row, j) => (j === i ? { ...row, pick: !row.pick } : row)) : s.batch })),
       installBatch: (scope: 'user' | 'local') => void installBatch($, scope),
       clearBatch: () => void update($, core, s => ({ ...s, batch: null, message: null })),
@@ -922,7 +947,10 @@ export const register: Register = on => {
     }
     try {
       isTerminal = terminal
-      return Panel({ ui, c, n, github, act, terminal, width, now, lang: c.lang })
+      // The module path has to be a literal in this file; surfaces without a `Client` keep the one-line field.
+      const Client = ui.Client
+      const editor = Client ? <Client key="research-editor" module="./editor.tsx" width="100%" props={{ placeholder: t(c.lang, 'find.placeholder'), start: draft, reset: cleared }} /> : null
+      return Panel({ ui, c, n, github, act, terminal, width, now, lang: c.lang, editor })
     } catch (err) {
       // A panel that cannot draw says why, instead of the engine's empty "nothing to show".
       return (

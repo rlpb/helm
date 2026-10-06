@@ -142,6 +142,7 @@ export const hi: Dict = {
   'batch.unsupported': 'GitHub लिंक नहीं है: अभी समर्थित नहीं',
   'batch.matched': 'नाम से मिला: {0}',
   'batch.installed': 'इंस्टॉल हुआ',
+  'batch.have': 'पहले से इंस्टॉल है',
   'batch.failed': 'इंस्टॉल नहीं हो सका',
   'msg.batchLooking': '{1} में से {0} जाँच रहा है…',
   'msg.batchChecked': '{0} जाँचे: {1} इंस्टॉल के लिए तैयार।',

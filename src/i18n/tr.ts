@@ -142,6 +142,7 @@ export const tr: Dict = {
   'batch.unsupported': 'GitHub bağlantısı değil: henüz desteklenmiyor',
   'batch.matched': 'adla eşleşti: {0}',
   'batch.installed': 'kuruldu',
+  'batch.have': 'Zaten kurulu',
   'batch.failed': 'kurulamadı',
   'msg.batchLooking': '{1} içinden {0} denetleniyor…',
   'msg.batchChecked': '{0} denetlendi: {1} kuruluma hazır.',

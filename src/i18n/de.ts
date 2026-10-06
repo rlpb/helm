@@ -142,6 +142,7 @@ export const de: Dict = {
   'batch.unsupported': 'Kein GitHub-Link: noch nicht unterstützt',
   'batch.matched': 'per Name gefunden: {0}',
   'batch.installed': 'installiert',
+  'batch.have': 'Bereits installiert',
   'batch.failed': 'Installation fehlgeschlagen',
   'msg.batchLooking': 'Prüfe {0} von {1}…',
   'msg.batchChecked': '{0} geprüft: {1} bereit zur Installation.',

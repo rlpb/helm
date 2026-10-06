@@ -142,6 +142,7 @@ export const id: Dict = {
   'batch.unsupported': 'Bukan tautan GitHub: belum didukung',
   'batch.matched': 'cocok berdasarkan nama: {0}',
   'batch.installed': 'terpasang',
+  'batch.have': 'Sudah terpasang',
   'batch.failed': 'gagal memasang',
   'msg.batchLooking': 'Memeriksa {0} dari {1}…',
   'msg.batchChecked': '{0} diperiksa: {1} siap dipasang.',

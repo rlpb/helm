@@ -62,7 +62,7 @@ export type Hit = { repo: string; description: string; stars: number }
 /** One line of a pasted list: what was named, how far Helm got, and whether it is ticked for installing. */
 export type BatchRow = {
   label: string
-  state: 'wait' | 'check' | 'done' | 'missing' | 'unsupported' | 'installed' | 'failed'
+  state: 'wait' | 'check' | 'done' | 'missing' | 'unsupported' | 'installed' | 'failed' | 'have'
   found: Found | null
   /** The repository a plain name was matched to. */
   via?: string

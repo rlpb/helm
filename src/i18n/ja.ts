@@ -142,6 +142,7 @@ export const ja: Dict = {
   'batch.unsupported': 'GitHub のリンクではありません：未対応です',
   'batch.matched': '名前で一致：{0}',
   'batch.installed': 'インストール済み',
+  'batch.have': 'すでにインストール済み',
   'batch.failed': 'インストールできませんでした',
   'msg.batchLooking': '{1} 件中 {0} 件を確認中…',
   'msg.batchChecked': '{0} 件確認：{1} 件がインストール可能です。',

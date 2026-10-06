@@ -1,5 +1,5 @@
 // The research box: from what the person typed to a verdict and, after a yes, an install.
-import type { Meta, Reason, Verdict } from '../types'
+import type { Entry, Meta, Reason, Verdict } from '../types'
 
 // Everything here is pure; the calls to `gh` live in hooks/register.tsx.
 
@@ -46,6 +46,14 @@ export function installPlan(m: Meta, scope: 'user' | 'local', skillsDir: string)
     return SAFE.test(name) ? [['git', 'clone', '--depth', '1', `https://github.com/${m.repo}.git`, `${skillsDir}/${name}`]] : null
   }
   return null
+}
+
+const flat = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** The installed tool a repository name or a plain name already is, if any: same name once case and punctuation are set aside. */
+export function installedAs(index: Entry[], name: string): Entry | undefined {
+  const want = flat(name)
+  return want.length < 3 ? undefined : index.find(e => flat(e.name) === want)
 }
 
 // ---- a whole text instead of one link: every link, repo and name in it ----

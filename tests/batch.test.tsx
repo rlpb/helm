@@ -15,6 +15,7 @@ const run = (argv: string[]) => {
   const [, full, file] = m
   if (full === 'demo/gone') return { exitCode: 1, stdout: '', stderr: '404' }
   if (!file) return { exitCode: 0, stdout: JSON.stringify(repo(full)), stderr: '' }
+  if (full === 'demo/bare') return { exitCode: 1, stdout: '', stderr: '' }
   if (file.endsWith('marketplace.json')) return { exitCode: 0, stdout: JSON.stringify({ name: 'mk', plugins: [{ name: full.split('/')[1] }] }), stderr: '' }
   return { exitCode: 1, stdout: '', stderr: '' }
 }
@@ -23,10 +24,8 @@ test('a pasted list is checked line by line and only the ticked ones are install
   const w = world($, on, { run })
   await boot($, PROJECT)
   const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
-  await ui.input({
-    key: 'research',
-    text: ['Things to try:', '- https://github.com/demo/alpha', '- demo/gone', '- Caveman', 'and https://example.com/other'].join('\n'),
-  })
+  await ui.post({ text: ['Things to try:', '- https://github.com/demo/alpha', '- demo/gone', '- Caveman', 'and https://example.com/other'].join('\n') }, { in: 'research-editor' })
+  await ui.press({ key: 'research-go' })
   await new Promise(r => setTimeout(r, 200))
   const text = await textOf(ui)
   expect(text).toContain('found in your text')
@@ -48,9 +47,36 @@ test('one link still gives the single verdict card, not a list', async ($, on) =
   world($, on, { run })
   await boot($, PROJECT)
   const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
-  await ui.input({ key: 'research', text: 'https://github.com/demo/alpha' })
+  await ui.post({ text: 'https://github.com/demo/alpha' }, { in: 'research-editor' })
+  await ui.press({ key: 'research-go' })
   await new Promise(r => setTimeout(r, 100))
   const text = await textOf(ui)
   expect(text).not.toContain('found in your text')
   expect(text).toContain('demo/alpha')
+})
+
+test('Ctrl+Enter inside the text area searches, and Clear empties the draft', async ($, on) => {
+  world($, on, { run })
+  await boot($, PROJECT)
+  const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
+  await ui.post({ text: 'https://github.com/demo/alpha', submit: true }, { in: 'research-editor' })
+  await new Promise(r => setTimeout(r, 100))
+  expect(await textOf(ui)).toContain('demo/alpha')
+  await ui.press({ key: 'research-clear' })
+  await ui.press({ key: 'research-go' })
+  await new Promise(r => setTimeout(r, 50))
+  expect(await textOf(ui)).not.toContain('found in your text')
+})
+
+test('what is already installed is not looked up again, and a repository that is no skill is greyed, not red', async ($, on) => {
+  const w = world($, on, { run })
+  await boot($, PROJECT)
+  const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
+  await ui.post({ text: ['demo/tdd', 'demo/alpha', 'demo/bare'].join('\n') }, { in: 'research-editor' })
+  await ui.press({ key: 'research-go' })
+  await new Promise(r => setTimeout(r, 200))
+  const text = await textOf(ui)
+  expect(text).toContain('Already installed')
+  expect(w.ran.some(a => a.join(' ').includes('repos/demo/tdd'))).toBe(false)
+  expect(text).toContain('No plugin catalog or SKILL.md')
 })

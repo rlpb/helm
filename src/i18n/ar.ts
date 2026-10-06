@@ -142,6 +142,7 @@ export const ar: Dict = {
   'batch.unsupported': 'ليس رابط GitHub: غير مدعوم بعد',
   'batch.matched': 'وُجد بالاسم: {0}',
   'batch.installed': 'تم التثبيت',
+  'batch.have': 'مثبّت بالفعل',
   'batch.failed': 'تعذّر التثبيت',
   'msg.batchLooking': 'فحص {0} من {1}…',
   'msg.batchChecked': 'تم فحص {0}: {1} جاهز للتثبيت.',
