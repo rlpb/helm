@@ -16,7 +16,7 @@ import { GLOW_MS, cells, layout, svg } from '../src/graph'
 const PANE = 'helm'
 let isTerminal = false
 let fading = false
-const core = atom({ plugin: 'helm', key: 'core' } as const, { github: false, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
+const core = atom({ plugin: 'helm', key: 'core' } as const, { setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -61,7 +61,7 @@ async function undoHere($: any) {
   const text = undoPicks((await $.fs.read(file)) as string, before)
   if (text === null) return say($, 'This folder\'s settings file is not valid JSON, so Helm left it alone.')
   await $.fs.write(file, text)
-  await $.store.set(undoKey(c.project.key), undefined)
+  await $.store.delete(undoKey(c.project.key))
   await say($, 'Put this folder back as it was.')
 }
 
@@ -191,6 +191,7 @@ async function fixIssue($: any, key: string) {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    const started = await next(e)
     const home = ((await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME')) ?? '').replace(/\\/g, '/')
     const configDir = (((await $.env.get('CLAUDE_CONFIG_DIR')) ?? '') || `${home}/.claude`).replace(/\\/g, '/').replace(/\/+$/, '')
     const cwd = (((await $.session.cwd().catch(() => '')) ?? '') as string).replace(/\\/g, '/').replace(/\/+$/, '')
@@ -206,11 +207,10 @@ export const register: Register = on => {
       settings,
     ).catch(() => [])
 
-    const github = hasGithub(await $.tool.list().catch(() => []))
     const setup = { ...DEFAULT_SETUP, ...(((await $.store.get('github-setup')) as object | undefined) ?? {}) }
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
-    await update($, core, () => ({ github: false, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, github, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
-    return next(e)
+    await update($, core, () => ({ used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    return started
   })
 
   // A Skill call lights its dot. A terminal has no animation of its own, so it redraws while the glow fades.
@@ -239,7 +239,7 @@ export const register: Register = on => {
   // The GitHub brief rides on the first prompt of a project, once.
   on('prompt.submit', async ($, e, next) => {
     const c = await read($, core)
-    if (!c.project || !c.github || !c.setup.on) return next(e)
+    if (!c.project || !c.setup.on || !hasGithub(await $.tool.list().catch(() => []))) return next(e)
     const sentKey = `gh-sent:${c.project.key}`
     if (await $.store.get(sentKey)) return next(e)
     const text = brief(c.setup)
@@ -278,6 +278,7 @@ export const register: Register = on => {
     const { Box, Button, Input, Raster, Svg, Text } = $.ui.resolve(e as any) as any
     const c = await read($, core)
     const n = await read($, nav)
+    const github = hasGithub(await $.tool.list().catch(() => []))
     const rows = tally(c.index ?? [])
     const active = (c.index ?? []).filter(x => x.on).length
     const tabs = (
@@ -314,7 +315,7 @@ export const register: Register = on => {
         {c.index === null && <Text dimColor>Reading what is installed…</Text>}
         {c.index !== null && (
           <Text dimColor>
-            {c.index.length} installed, {active} on
+            {`${c.index.length} installed, ${active} on`}
           </Text>
         )}
         {n.tab === 'project' && c.project && (
@@ -327,7 +328,7 @@ export const register: Register = on => {
             onSubmit={text => update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } }))}
           />
         )}
-        {n.tab === 'project' && c.project && c.github && (
+        {n.tab === 'project' && c.project && github && (
           <Box flexDirection="column">
             <Button
               key="gh"
@@ -405,7 +406,7 @@ export const register: Register = on => {
             {c.hits.map(h => (
               <Box key={h.repo}>
                 <Button key={`h-${h.repo}`} label={h.repo} onPress={() => pickHit($, h.repo)} />
-                <Text dimColor> {h.stars}★ {h.description.slice(0, 60)}</Text>
+                <Text dimColor>{` ${h.stars}★ ${h.description.slice(0, 60)}`}</Text>
               </Box>
             ))}
           </Box>
@@ -413,7 +414,7 @@ export const register: Register = on => {
         {c.found && (
           <Box flexDirection="column">
             <Text bold>
-              {c.found.meta.repo} <Text dimColor>{c.found.meta.license ?? 'no license'}, {c.found.meta.stars}★</Text>
+              {c.found.meta.repo} <Text dimColor>{`${c.found.meta.license ?? "no license"}, ${c.found.meta.stars}★`}</Text>
             </Text>
             <Text>{c.found.verdict.level === 'ok' ? 'Looks fine.' : c.found.verdict.level === 'caution' ? 'Check before you install:' : 'Do not install:'}</Text>
             {c.found.verdict.reasons.map(reason => (
@@ -435,7 +436,7 @@ export const register: Register = on => {
         {(n.tab === 'global' || !c.ask) &&
           rows.map(r => (
             <Text key={r.category}>
-              {r.category}: {r.on}/{r.total}
+              {`${r.category}: ${r.on}/${r.total}`}
             </Text>
           ))}
       </Box>
