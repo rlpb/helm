@@ -267,6 +267,8 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     .slice(0, 5)
   const flaggedList = flagged(c.scans)
   const never = index.filter(x => !c.uses[x.key]?.n).length
+  // A state kept across a reload may predate this field.
+  const open = n.open ?? []
   const attention = (report?.length ?? 0) + flaggedList.length
   const measured = report !== null || Object.keys(c.scans).length > 0
   const overall = !measured ? 'subtle' : flaggedList.length > 0 ? '#ff7a6b' : attention > 0 ? '#f2b84b' : '#6fd08c'
@@ -394,11 +396,11 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     <Box flexDirection="column">
       <Box justifyContent="space-between">
         {title(`${T('g.tools')}  ·  ${index.length}`, '#5aa9ff')}
-        <Button key="fold-all" label={n.open.length > 0 ? T('g.collapseAll') : T('g.expandAll')} plain onPress={() => act.foldAll(byCategory.map(r => r.category))} />
+        <Button key="fold-all" label={open.length > 0 ? T('g.collapseAll') : T('g.expandAll')} plain onPress={() => act.foldAll(byCategory.map(r => r.category))} />
       </Box>
       {byCategory.map(r => {
         const items = index.filter(x => x.category === r.category)
-        const isOpen = n.open.includes(r.category)
+        const isOpen = open.includes(r.category)
         return (
           <Box key={`cat-${r.category}`} flexDirection="column" marginTop={1}>
             <Box columnGap={1}>

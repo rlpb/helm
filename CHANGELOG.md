@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-06
+
+### Fixed
+
+- The panel said "undefined is not an object (evaluating 'n.open.length')" in a session that was already open when Helm updated: the saved navigation state predates the folded categories. A missing value now means nothing is open.
+
 ## [0.8.0] - 2026-10-06
 
 ### Changed
@@ -131,7 +137,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/rlpb/helm/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rlpb/helm/compare/v0.7.3...v0.8.0
 [0.7.3]: https://github.com/rlpb/helm/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlpb/helm/compare/v0.7.1...v0.7.2

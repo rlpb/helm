@@ -589,8 +589,8 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
-      fold: (cat: string) => void update($, nav, s => ({ ...s, open: s.open.includes(cat) ? s.open.filter(x => x !== cat) : [...s.open, cat] })),
-      foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: s.open.length > 0 ? [] : cats })),
+      fold: (cat: string) => void update($, nav, s => ({ ...s, open: (s.open ?? []).includes(cat) ? s.open.filter(x => x !== cat) : [...(s.open ?? []), cat] })),
+      foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: (s.open ?? []).length > 0 ? [] : cats })),
       inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: key })),
       lang: (pref: string) => void setLang($, pref),
       ask: (text: string) => void update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } })),
