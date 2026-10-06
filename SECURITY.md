@@ -24,8 +24,9 @@ scope:
   a yes)
 - an install that happens without the person's confirmation
 - an Undo that restores something other than what it saved
+- a removal that touches more than the plugin it was asked to remove: when `claude plugin uninstall` fails in every scope, Helm edits `plugins/installed_plugins.json` itself, after saving the original next to it
 - anything that makes Helm's own code reach the network: it never does. The only
-  outside calls are the `gh` and `claude` commands it runs on the person's behalf.
+  outside calls are the `gh`, `claude`, `skillspector` and `uv` commands it runs on the person's behalf.
 
 ## Verifying a download
 
@@ -38,7 +39,7 @@ signed with a short-lived certificate GitHub issues to the workflow run that
 made it. It names the repository, the workflow and the commit:
 
 ```bash
-gh attestation verify helm-0.10.0.zip --repo rlpb/helm
+gh attestation verify helm-0.10.1.zip --repo rlpb/helm
 ```
 
 The command exits with an error for a file this repository's release workflow

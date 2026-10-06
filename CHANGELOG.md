@@ -6,6 +6,13 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-06
+
+### Changed
+
+- Cleanup after the Map rebuild: the drawn-wheel code, its test and its picture are removed (the README now shows the real Map), nine phrases nobody reads are gone from all 16 languages, and the navigation state lost two fields it no longer used.
+- The documentation now says what Helm really does: the Status section and its automatic health check, removal in any scope with the registry fallback and its backup, the other programs it runs (`skillspector`, `uv`), and the three-tab design with the card-based Map.
+
 ## [0.10.0] - 2026-10-06
 
 ### Changed
@@ -207,7 +214,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/rlpb/helm/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/rlpb/helm/compare/v0.9.5...v0.10.0
 [0.9.5]: https://github.com/rlpb/helm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/rlpb/helm/compare/v0.9.3...v0.9.4

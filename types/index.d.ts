@@ -112,8 +112,7 @@ export type Core = {
   ask: Ask | null
 }
 
-/** `open` holds the category ids unfolded in Global. */
-export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null; open: string[]; /** The category the map is zoomed on, or none for the whole map. */ zoom: string | null }
+export type Nav = { tab: Tab; /** The tool whose card is open in Global. */ inspect: string | null; /** The category ids unfolded in Global. */ open: string[] }
 
 declare module 'claude-code' {
   interface PluginState {

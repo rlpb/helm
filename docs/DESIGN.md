@@ -10,10 +10,10 @@ A tool for anyone who uses Claude Code: a control panel that assists a project f
 
 - **Form:** a Claude Code plugin only (hooks, a pane, a line below the prompt, a few skills). No separate app.
 - **Name:** Helm. Command: `/helm`.
-- **Start of a project:** never automatic. In a folder Helm has not seen, a notice under the prompt offers to set the project up, with *Open* and *Not here*. *Not here* is remembered per folder, so a project can opt out for good.
+- **Start of a project:** never automatic. In a folder Helm has not seen, a notice under the prompt offers to set the project up, with *Open* and *Not here* (in a chat already under way: *Read it*, which shortlists tools from the folder). *Not here* is remembered per folder, so a project can opt out for good.
 - **Choosing tools:** a free local shortlist from the installed catalog, then one call to the small model that picks precisely. The cost is shown before it runs.
-- **Tabs:** two. *Project* and *Global*; the graph lives inside them.
-- **Graph:** a real image in the style of Obsidian (nodes with glow, colors per category, nodes light up when a skill is used), drawn with the engine's `Image`/`Raster` elements and repainted with `$.ui.blit`, so it animates at no token cost. Falls back to cells where images are not supported.
+- **Tabs:** three. *Project* (everything for one folder on one page), *Global* (search for a tool, a Status section, most used, every tool folded by category) and *Map*.
+- **Map:** one card per category, sized by how many tools it holds, each tool a dot (filled on, ring off, lit disc while Claude has just used it), built from the panel's own elements so it wraps with the window and is never cut or overlapped. An earlier version drew a wheel in SVG; it needed exact pixels, which the engine does not give a mod, and was dropped. The engine gives a mod no wheel or drag events, so there is no free zoom.
 - **During work:** when a skill that is not active is needed, a line offers two ways to say yes (*for this chat*, *always in this project*) and one to say no (*ignore*). Whether a change can apply to the running chat is verified while building: the engine reloads skills when `skillOverrides` changes.
 
 - **Research box:** Helm vets a tool (license, upkeep, risks, overlap), shows a short verdict, and installs only after a yes. A tool added for one project is installed for the user, so it stays a candidate in every other project.

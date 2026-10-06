@@ -53,7 +53,7 @@ const core = atom(
     ask: null,
   } as Core,
 )
-const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null, open: [], zoom: null } as Nav)
+const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', inspect: null, open: [] } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
 const undoKey = (key: string) => `undo:${key}`
@@ -100,7 +100,7 @@ async function lookHere($: any) {
   const named = picks.map(k => (c.index ?? []).find(x => x.key === k)?.name).filter(Boolean).slice(0, 4)
   await setState($, 'ready')
   await update($, core, s => ({ ...s, ask: { text: [c.project!.name, ...names.slice(0, 8)].join(' '), picks }, message: t(c.lang, 'msg.read', c.project!.name, named.join(', ') || '-') }))
-  await update($, nav, s => ({ ...s, tab: 'project', sub: 'setup' }))
+  await update($, nav, s => ({ ...s, tab: 'project' }))
   await $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
 }
 
