@@ -50,10 +50,15 @@ export function parseScan(text: string): ScanResult | null {
     severity: String(risk.severity ?? ''),
     recommendation: String(risk.recommendation),
     flagged: main.length,
+    critical: main.filter(i => i.sev === 'CRITICAL').length,
+    high: main.filter(i => i.sev === 'HIGH').length,
     top: main.slice(0, 4).map(({ sev, pattern, where }) => ({ sev, pattern, where })),
     testOnly: issues.length - main.length,
   }
 }
+
+/** SkillSpector scores harshly: a big skill with long docs can reach 100. Helm blocks only on one critical finding or three high ones, outside tests and docs. */
+export const blocks = (scan: ScanResult): boolean => scan.critical >= 1 || scan.high >= 3
 
 /** Adds what SkillSpector found to a verdict. The level can only go up. */
 export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unknown' | 'missing' | 'ready'): Verdict {
@@ -69,7 +74,7 @@ export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unkno
     reasons.push({ k: 'unscanned' })
     raise('caution')
   } else if (scan.recommendation !== 'SAFE') {
-    if (scan.flagged > 0 && scan.recommendation === 'DO_NOT_INSTALL') {
+    if (scan.flagged > 0 && scan.recommendation === 'DO_NOT_INSTALL' && blocks(scan)) {
       reasons.push({ k: 'scanhigh', n: scan.score })
       raise('no')
     } else if (scan.flagged > 0) {
@@ -86,8 +91,11 @@ export function foldVerdict(v: Verdict, scan: ScanResult | null, scanner: 'unkno
 /** A tool Helm may still install on a second, explicit yes: only the scanner said no, nothing about form or upkeep. */
 export const isOverridable = (f: Found): boolean => f.verdict.level === 'no' && f.verdict.reasons.some(r => r.k === 'scanhigh') && !f.verdict.reasons.some(r => r.k === 'archived' || r.k === 'noform')
 
-/** Those worth a row in the Security tile, worst first. */
+/** Those worth a row in the Security tile: a critical finding or three high ones, worst first. The rest is noise until it is not. */
 export const flagged = (scans: Record<string, ScanResult>): [string, ScanResult][] =>
   Object.entries(scans)
-    .filter(([, s]) => s.recommendation !== 'SAFE' && s.flagged > 0)
+    .filter(([, s]) => blocks(s))
     .sort((a, b) => b[1].score - a[1].score)
+
+/** How many scans came back with "do not install" but not enough to block: worth a look, not an alarm. */
+export const watched = (scans: Record<string, ScanResult>): number => Object.values(scans).filter(s => s.recommendation === 'DO_NOT_INSTALL' && s.flagged > 0 && !blocks(s)).length

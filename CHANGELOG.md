@@ -6,6 +6,12 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-06
+
+### Changed
+
+- **A calmer verdict.** SkillSpector scores harshly: on a real setup of 168 skills it said "do not install" to 46, almost all because of long docs and forms. Helm now blocks an installation, and lists a skill under Security, only for **one critical finding or three high ones** outside tests and docs. A lesser "do not install" stays a caution with its findings. The security dot is red for a blocking skill, amber for a lesser one, green when clean.
+
 ## [0.7.0] - 2026-10-06
 
 ### Added
@@ -96,7 +102,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/rlpb/helm/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rlpb/helm/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rlpb/helm/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rlpb/helm/compare/v0.4.0...v0.5.0

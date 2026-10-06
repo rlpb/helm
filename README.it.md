@@ -59,7 +59,7 @@ Le release sono costruite dal workflow di release a partire da un commit con tag
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.7.0.zip --repo rlpb/helm
+gh attestation verify helm-0.7.1.zip --repo rlpb/helm
 ```
 
 ## Supporto

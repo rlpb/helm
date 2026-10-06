@@ -58,7 +58,7 @@ export type Hit = { repo: string; description: string; stars: number }
 export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
 
 /** What SkillSpector said about one skill or plugin: the score, and the worst findings outside tests and docs. */
-export type ScanResult = { score: number; severity: string; recommendation: string; flagged: number; top: { sev: string; pattern: string; where: string }[]; testOnly: number }
+export type ScanResult = { score: number; severity: string; recommendation: string; flagged: number; critical: number; high: number; top: { sev: string; pattern: string; where: string }[]; testOnly: number }
 
 export type Scanner = { state: 'unknown' | 'missing' | 'ready'; version: string | null }
 

@@ -2,7 +2,7 @@
 // itself, and otherwise a quiet line that shows the project, the limits and the skill in use.
 
 import { COLOR } from '../graph'
-import { flagged } from '../skillspector'
+import { flagged, watched } from '../skillspector'
 import { t } from '../i18n'
 import type { Lang } from '../i18n'
 import type { Core } from '../../types'
@@ -62,7 +62,7 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
   // The security dot: green when the last scan was clean, amber for cautions, red for a "do not install", dim when nothing was scanned yet.
   const found = flagged(c.scans)
   const scanned = Object.keys(c.scans).length > 0
-  const shield = !scanned ? 'inactive' : found.some(([, s]) => s.recommendation === 'DO_NOT_INSTALL') ? 'error' : found.length > 0 ? 'warning' : 'success'
+  const shield = !scanned ? 'inactive' : found.length > 0 ? 'error' : watched(c.scans) > 0 ? 'warning' : 'success'
   const dot = litCat ? `#${(COLOR[litCat] ?? COLOR.other).toString(16).padStart(6, '0')}` : '#6fd08c'
 
   return (

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { foldVerdict, isOverridable, parseScan, parseVersion, repoTarget, scanCmd } from '../src/skillspector'
+import { blocks, flagged, foldVerdict, isOverridable, parseScan, parseVersion, repoTarget, scanCmd, watched } from '../src/skillspector'
 import { BASE, boot, PROJECT, world } from './world'
 
 const PANE_PROPS = { title: 'Helm', isFocused: true, bodyColumns: 80, placement: 'inline', scroll: {}, view: {} } as any
@@ -47,12 +47,16 @@ describe('reading what SkillSpector says', () => {
 
   test('a scan only raises a verdict, never lowers it', () => {
     const ok = { level: 'ok' as const, reasons: [] }
-    const bad = parseScan(JSON.stringify(report('DO_NOT_INSTALL', 90, [{ severity: 'HIGH', pattern: 'p', file: 'a.md' }])))!
+    const bad = parseScan(JSON.stringify(report('DO_NOT_INSTALL', 90, [{ severity: 'CRITICAL', pattern: 'p', file: 'a.md' }])))!
+    const one = parseScan(JSON.stringify(report('DO_NOT_INSTALL', 90, [{ severity: 'HIGH', pattern: 'p', file: 'a.md' }])))!
+    const three = parseScan(JSON.stringify(report('DO_NOT_INSTALL', 90, ['a', 'b', 'c'].map(f => ({ severity: 'HIGH', pattern: 'p', file: `${f}.md` })))))!
     const mid = parseScan(JSON.stringify(report('CAUTION', 40, [{ severity: 'MEDIUM', pattern: 'p', file: 'a.md' }])))!
     const side = parseScan(JSON.stringify(report('DO_NOT_INSTALL', 90, [{ severity: 'HIGH', pattern: 'p', file: 'tests/a.ts' }])))!
     const safe = parseScan(JSON.stringify(report('SAFE', 0)))!
     expect(foldVerdict(ok, safe, 'ready').level).toBe('ok')
     expect(foldVerdict(ok, bad, 'ready')).toEqual({ level: 'no', reasons: [{ k: 'scanhigh', n: 90 }] })
+    expect(foldVerdict(ok, three, 'ready').level).toBe('no')
+    expect(foldVerdict(ok, one, 'ready')).toEqual({ level: 'caution', reasons: [{ k: 'scanmid', n: 90 }] })
     expect(foldVerdict(ok, mid, 'ready').level).toBe('caution')
     expect(foldVerdict(ok, side, 'ready').reasons).toEqual([{ k: 'testsOnly', n: 1 }])
     expect(foldVerdict(ok, null, 'missing').reasons).toEqual([{ k: 'noscanner' }])
@@ -91,7 +95,7 @@ describe('the scanner in the panel', () => {
   test('a bad scan hides Install, offers "Install anyway" on a second press only', async ($, on) => {
     const w = world($, on, {
       run: github,
-      scanner: () => report('DO_NOT_INSTALL', 90, [{ severity: 'HIGH', pattern: 'External Script Fetching', file: 'SKILL.md', line: 4 }]),
+      scanner: () => report('DO_NOT_INSTALL', 90, [{ severity: 'CRITICAL', pattern: 'External Script Fetching', file: 'SKILL.md', line: 4 }]),
     })
     await boot($, PROJECT)
     const ui = await pane($)
@@ -118,7 +122,7 @@ describe('the scanner in the panel', () => {
 
   test('"Scan skills" scans everything installed, lists what is flagged, and can switch a skill off and on', async ($, on) => {
     const w = world($, on, {
-      scanner: target => (target.endsWith('report-writer') ? report('DO_NOT_INSTALL', 80, [{ severity: 'HIGH', pattern: 'Data Exfiltration', file: 'SKILL.md', line: 9 }]) : report('SAFE', 0)),
+      scanner: target => (target.endsWith('report-writer') ? report('DO_NOT_INSTALL', 80, [{ severity: 'CRITICAL', pattern: 'Data Exfiltration', file: 'SKILL.md', line: 9 }]) : report('SAFE', 0)),
     })
     await boot($, PROJECT)
     const ui = await pane($)
@@ -157,7 +161,7 @@ describe('the security dot and the scan cache', () => {
   const band = ($: any) => $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
 
   test('the row has a Security button that opens Global, and shows how many are flagged after a scan', async ($, on) => {
-    world($, on, { scanner: target => (target.endsWith('report-writer') ? report('DO_NOT_INSTALL', 80, [{ severity: 'HIGH', pattern: 'X', file: 'SKILL.md' }]) : report('SAFE', 0)) })
+    world($, on, { scanner: target => (target.endsWith('report-writer') ? report('DO_NOT_INSTALL', 80, [{ severity: 'CRITICAL', pattern: 'X', file: 'SKILL.md' }]) : report('SAFE', 0)) })
     await boot($, PROJECT)
     await (await band($)).press({ key: 'skip' })
     const before = await band($)
@@ -188,5 +192,17 @@ describe('the security dot and the scan cache', () => {
     expect(first).toBe(3)
     await ui.press({ key: 'scan' })
     expect(w.ran.filter(a => a[0] === 'skillspector' && a[1] === 'scan').length).toBe(first)
+  })
+})
+
+describe('what counts as flagged', () => {
+  test('only a critical finding or three high ones block; the rest is watched, not alarmed', () => {
+    const mk = (critical: number, high: number, rec = 'DO_NOT_INSTALL') => ({ score: 90, severity: 'HIGH', recommendation: rec, flagged: critical + high, critical, high, top: [], testOnly: 0 })
+    expect(blocks(mk(1, 0))).toBe(true)
+    expect(blocks(mk(0, 3))).toBe(true)
+    expect(blocks(mk(0, 2))).toBe(false)
+    const scans = { 'skill:a': mk(1, 0), 'skill:b': mk(0, 1), 'skill:c': mk(0, 0, 'SAFE'), 'skill:d': mk(0, 4) }
+    expect(flagged(scans).map(([k]) => k).sort()).toEqual(['skill:a', 'skill:d'])
+    expect(watched(scans)).toBe(1)
   })
 })

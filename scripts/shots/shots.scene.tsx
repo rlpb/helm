@@ -56,7 +56,7 @@ for (const shot of SHOTS) {
         own('brand-voice', 'Write in the house tone'),
         ...(shot.tidy ? [[`${BASE}/skills/half-done/notes.txt`, 'x'] as [string, string]] : []),
       ],
-      scanner: target => (target.endsWith('humanizer') ? { risk_assessment: { score: 62, severity: 'HIGH', recommendation: 'CAUTION', max_issue_severity: 'HIGH' }, issues: [{ severity: 'HIGH', pattern: 'External Script Fetching', location: { file: 'SKILL.md', start_line: 31 } }] } : { risk_assessment: { score: 0, severity: 'LOW', recommendation: 'SAFE', max_issue_severity: 'NONE' }, issues: [] }),
+      scanner: target => (target.endsWith('humanizer') ? { risk_assessment: { score: 62, severity: 'HIGH', recommendation: 'CAUTION', max_issue_severity: 'HIGH' }, issues: [{ severity: 'CRITICAL', pattern: 'External Script Fetching', location: { file: 'SKILL.md', start_line: 31 } }] } : { risk_assessment: { score: 0, severity: 'LOW', recommendation: 'SAFE', max_issue_severity: 'NONE' }, issues: [] }),
       run: argv => {
         if (argv[0] !== 'gh') return { exitCode: 0, stdout: '', stderr: '' }
         const url = argv.join(' ')
