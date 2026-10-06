@@ -64,7 +64,9 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
   // The security dot: green when the last scan was clean, amber for cautions, red for a "do not install", dim when nothing was scanned yet.
   const found = flagged(c.scans)
   const scanned = Object.keys(c.scans).length > 0
-  const shield = c.scanning ? 'suggestion' : !scanned ? 'inactive' : found.length > 0 ? 'error' : watched(c.scans) > 0 ? 'warning' : 'success'
+  // Green only when every installed tool was scanned and none is flagged or under caution; anything unscanned keeps it amber.
+  const unscanned = (c.index ?? []).filter(x => !c.scans[x.key]).length
+  const shield = c.scanning ? 'suggestion' : !scanned ? 'inactive' : found.length > 0 ? 'error' : watched(c.scans) > 0 || unscanned > 0 ? 'warning' : 'success'
   const dot = litCat ? `#${(COLOR[litCat] ?? COLOR.other).toString(16).padStart(6, '0')}` : '#6fd08c'
 
   return (

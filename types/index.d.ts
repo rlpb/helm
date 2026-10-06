@@ -29,7 +29,12 @@ export type ProjectState = 'new' | 'ready' | 'declined'
 export type Ask = { text: string; picks: string[] }
 
 /** One thing the health check found. `a` and `b` are the names the sentence is about. */
-export type Issue = { kind: 'stale-plugin' | 'broken-skill' | 'no-description' | 'duplicate'; key: string; a: string; b?: string; fix?: string[] }
+export type Issue = { kind: 'stale-plugin' | 'broken-skill' | 'no-description' | 'duplicate' | 'similar' | 'unused'; key: string; a: string; b?: string; fix?: string[] }
+
+/** The outcome of an update for one plugin or one skill folder under git. */
+export type UpdateRow = { id: string; name: string; state: 'current' | 'updated' | 'failed'; note?: string }
+/** The last update run: when, what it did, and how many own skills have no source to update from. */
+export type UpdateReport = { at: number; rows: UpdateRow[]; unsourced: number }
 
 /** What the repository page and its top-level files say about a tool. */
 export type Meta = {
@@ -53,6 +58,17 @@ export type Verdict = { level: 'ok' | 'caution' | 'no'; reasons: Reason[] }
 /** A tool the person asked about: what it is and what Helm thinks. */
 export type Found = { meta: Meta; verdict: Verdict; scan?: ScanResult | null }
 export type Hit = { repo: string; description: string; stars: number }
+
+/** One line of a pasted list: what was named, how far Helm got, and whether it is ticked for installing. */
+export type BatchRow = {
+  label: string
+  state: 'wait' | 'check' | 'done' | 'missing' | 'unsupported' | 'installed' | 'failed'
+  found: Found | null
+  /** The repository a plain name was matched to. */
+  via?: string
+  pick: boolean
+  why?: string
+}
 
 /** The GitHub baseline the person chose, kept across sessions. */
 export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
@@ -92,6 +108,8 @@ export type Core = {
   tick: number
   found: Found | null
   hits: Hit[] | null
+  /** A pasted list being checked, or checked and waiting for a yes. */
+  batch: BatchRow[] | null
   /** Repos installed for one project, offered later as global installs. */
   candidates: string[]
   /** Claude Code's config folder, slashes forward. */
@@ -100,6 +118,12 @@ export type Core = {
   message: string | null
   /** The health check, once run. */
   report: Issue[] | null
+  /** Days Helm has been recording which tools Claude uses. */
+  tracked: number
+  /** The last update run, kept across sessions. */
+  updates: UpdateReport | null
+  /** Tools the last scan could not finish, even on a second try. */
+  skipped: string[]
   /** The issue key whose fix awaits a second press. */
   confirm: string | null
   index: Entry[] | null

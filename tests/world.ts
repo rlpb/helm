@@ -39,7 +39,8 @@ export function world($: any, on: any, options: Options = {}) {
   }
   for (const [path, text] of options.files ?? []) files.set(key(path), text)
 
-  const store = new Map<string, unknown>(Object.entries(options.store ?? {}))
+  // The daily background scan is off in a test unless it asks for it: it would answer before the test looks.
+  const store = new Map<string, unknown>(Object.entries({ 'auto-scan': Date.UTC(2026, 9, 6, 12, 0, 0), ...(options.store ?? {}) }))
   on('store.get', (_$: any, e: any) => ({ value: store.get(e.key) }))
   on('store.set', (_$: any, e: any) => {
     store.set(e.key, e.value === undefined ? undefined : JSON.parse(JSON.stringify(e.value)))

@@ -6,6 +6,21 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-06
+
+### Added
+
+- **Paste a whole text into "Find a new tool".** A list of links, `owner/name` entries and plain names (one per line or comma), with notes around them, is read as a list: each item is checked (a repository directly, a name by searching and taking the first hit that fits), scanned, and shown with its verdict, and **nothing is installed until you tick it and press the install button**. Two lines meaning the same repository install once; links that are not GitHub are listed as not supported. A text with no link or name in it is read once by the small model. A single link still gives the single verdict card.
+- **Changes apply at once.** After installing, updating, removing, or switching a plugin, Helm asks Claude Code to reload plugins (`/reload-plugins`) and re-reads what is installed, so every list and bar in Helm changes immediately. If this build of Claude Code does not offer that command to a mod, the message says "Active from the next chat" instead of claiming otherwise.
+
+### Changed
+
+- **Status says only what was looked at.** A green mark now means the whole thing was checked and nothing is left to do:
+  - *Security*: green only when every installed tool was scanned and none is flagged or under caution. Tools that timed out get a second, patient try; anything still unscanned is named. The dot above the prompt follows the same rule. New or changed tools are scanned in the background once a day.
+  - *Updates*: every plugin is updated one by one (trying each scope) and the result of each is read: current, updated or failed, with the reason. Skill folders that are git checkouts are pulled too; skills with no source are counted, not hidden.
+  - *Health*: beyond broken files it now suggests switching off tools that do the same job as another (it keeps the one you use more) and skills that were never used, with a one-press switch-off. "Never used" is judged only after two weeks of watching, until then the tile says it is still learning.
+- **Better categories, automatically.** Two new categories (Science, Business) and a larger vocabulary sort what used to land in Other (lab, quantum and clinical tools; career and sales tools; Claude Code workflow tools); a tool whose name runs words together is read by the stems inside it. Nothing is set by hand: a new install is sorted from what it says about itself.
+
 ## [0.11.0] - 2026-10-06
 
 ### Changed
@@ -226,7 +241,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/rlpb/helm/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/rlpb/helm/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/rlpb/helm/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/rlpb/helm/compare/v0.9.5...v0.10.0

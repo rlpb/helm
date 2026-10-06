@@ -17,12 +17,12 @@ New plugins, skills and tools appear every week. Helm is the one place in Claude
 ## What it does
 
 - **Set up a project.** Open a new folder and Helm asks what you are building. It shortlists the fitting tools from what you already have installed, and one press turns them on for that folder only. Undo puts the folder back exactly as it was.
-- **Vet a tool.** Paste a GitHub link, `owner/name` or just a name. Helm reads the repository (license, archived or not, last update, stars, and whether it holds a plugin or a skill), gives a plain verdict, and installs only after you say yes. A tool you added for one project is offered later for all of them.
+- **Vet a tool, or a whole list.** Paste a GitHub link, `owner/name`, a name, or a whole text full of them. Helm reads each repository (license, archived or not, last update, stars, and whether it holds a plugin or a skill), scans it, gives a plain verdict per line, and installs only what you tick. Changes apply at once when Claude Code allows it. A tool you added for one project is offered later for all of them.
 - **See what is in use here.** The top of the **Project** page lists only what Claude used in this folder, by category, with how often and when. A skill that has just run is lit. It costs no tokens.
 - **Keep your limits in view.** A quiet row above the prompt shows the 5-hour and weekly limits and the context as small bars, plus the skill Claude is using now, with a security dot and an **Open Helm** button. The figures follow the session as it runs.
 - **Speaks your language.** 16 languages, following the computer's by default, changeable from the panel.
 - **Check before you trust.** [SkillSpector](https://github.com/NVIDIA/SkillSpector) by NVIDIA scans every skill and plugin you have, and every new tool before it can be installed, for prompt injection, data theft and risky code. A scan that says "do not install" hides the Install button. It is static-only: no model, no key, nothing leaves your computer. Helm keeps it up to date.
-- **Keep it healthy.** The **Status** section of the Global tab checks for plugins whose files are gone, broken skill folders, skills with no description and duplicate names (by itself at the start of a session and after each fix), updates every plugin in one press, and scans for risky skills. Removing a plugin works whatever scope it was installed in. None of it touches a project's own settings. Below it, every tool and skill is folded by category: press a name to see what it is and does.
+- **Keep it healthy, and know it.** The **Status** section of the Global tab says only what it actually looked at. Health checks broken files, duplicates, tools that do the same job and skills never used (after two weeks of watching). Updates reads the result of every plugin. Security shows green only when every tool was scanned and none is flagged. Removing a plugin works whatever scope it was installed in. None of it touches a project's own settings. Below it, every tool and skill is folded by category: press a name to see what it is and does.
 - **Start a repository properly.** When a GitHub connector is available, one checkbox adds a professional GitHub baseline to your first prompt: pick a license and the items you want (README, CI, `SECURITY.md`, Dependabot, branch protection and more), add your own directions, and it is remembered.
 
 <div align="center">
@@ -59,7 +59,7 @@ Releases are built by the release workflow from a tagged commit, with a SHA-256 
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.11.0.zip --repo rlpb/helm
+gh attestation verify helm-0.12.0.zip --repo rlpb/helm
 ```
 
 ## Support

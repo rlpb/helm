@@ -50,3 +50,10 @@ export async function checkup(disk: Disk, configDir: string): Promise<Issue[]> {
 
 /** The plugin ids to update, one `claude plugin update` each; skills from git are left to their owners. */
 export const updateAll = (ids: string[]): string[][] => ids.filter(id => SAFE.test(id.replace('@', ':'))).map(id => ['claude', 'plugin', 'update', id])
+
+/** What one `claude plugin update` said: "already at the latest version" is current, "updated from X to Y" is updated, anything else failed. */
+export function readUpdate(exitCode: number, text: string): { state: 'current' | 'updated' | 'failed'; note?: string } {
+  if (/already at the latest/i.test(text)) return { state: 'current' }
+  if (exitCode === 0 && /updated from/i.test(text)) return { state: 'updated' }
+  return { state: 'failed', note: text.trim().split('\n').filter(Boolean).slice(-1)[0]?.slice(0, 140) }
+}

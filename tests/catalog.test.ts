@@ -85,3 +85,20 @@ describe('the project', () => {
     expect(isProject('/helm-demo/app', BASE, '/helm-demo')).toBe(true)
   })
 })
+
+describe('sorting what nobody described well', () => {
+  test('a tool with a thin description is placed by what its name and words say', () => {
+    expect(categorize('pylabrobot', 'Control lab automation hardware')).toBe('science')
+    expect(categorize('qiskit', '')).toBe('science')
+    expect(categorize('career-ops', 'Job search, resume and interview preparation')).toBe('business')
+    expect(categorize('loop', 'Repeat a task at an interval')).toBe('setup')
+    expect(categorize('sapthesis-tesi', 'LaTeX template for a thesis')).toBe('write')
+    expect(categorize('claude-seo', 'SEO audit for a website: sitemap and markup')).toBe('web')
+    expect(categorize('code-review', 'Review a pull request for bugs')).toBe('build')
+  })
+
+  test('nothing that says something about itself is left in other', () => {
+    expect(categorize('whatever', '')).toBe('other')
+    expect(categorize('my-claude-helper', '')).toBe('setup')
+  })
+})

@@ -46,12 +46,13 @@ test('describing the project shortlists the fitting tools, and one press turns t
 })
 
 test('the Global tab checks the setup and updates every plugin', async ($, on) => {
-  const w = world($, on)
+  const w = world($, on, { run: argv => (argv[2] === 'update' ? { exitCode: 0, stdout: `${argv[3]} is already at the latest version (1.0.0).`, stderr: '' } : { exitCode: 0, stdout: '', stderr: '' }) })
   await boot($, PROJECT)
   const ui = await pane($)
   await ui.press({ key: 'global' })
   await ui.press({ key: 'update' })
   expect(w.ran.filter(a => a[2] === 'update').map(a => a[3]).sort()).toEqual(['seo@m', 'tdd@m'])
+  expect(await textOf(ui)).toContain('All 2 plugins are up to date')
   await ui.press({ key: 'check' })
   expect(await textOf(ui)).toContain('Healthy')
 })

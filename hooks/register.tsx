@@ -1,15 +1,17 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Core, Found, Hit, Meta, Nav, ProjectState, ScanResult, Setup } from '../types'
-import { installPlan, judge, parseTarget } from '../src/research'
+import type { BatchRow, Core, Found, Hit, Meta, Nav, ProjectState, ScanResult, Setup } from '../types'
+import { installPlan, judge, parseItems } from '../src/research'
+import type { Item } from '../src/research'
 import { loadIndex, scanTargets } from '../src/load'
 import { shortlist } from '../src/shortlist'
 import { hintFor, parseChoice, refinePrompt } from '../src/suggest'
 import { isProject, localSettings, projectKey, projectName } from '../src/project'
 import { applyPicks, setSkillOff, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
-import { checkup, updateAll } from '../src/tidy'
+import { checkup, readUpdate } from '../src/tidy'
+import { review } from '../src/health'
 import { DEFAULT_SETUP, brief, hasGithub, nextLicense } from '../src/github'
 import { GLOW_MS, glow } from '../src/graph'
 import { foldVerdict, installCmd, isOverridable, parseScan, parseVersion, repoTarget, scanCmd, upgradeCmd, versionCmd } from '../src/skillspector'
@@ -40,10 +42,14 @@ const core = atom(
     tick: 0,
     found: null,
     hits: null,
+    batch: null,
     candidates: [],
     dir: '',
     message: null,
     report: null,
+    tracked: 0,
+    updates: null,
+    skipped: [],
     confirm: null,
     index: null,
     project: null,
@@ -193,7 +199,8 @@ async function accept($: any, key: string, scope: 'project' | 'session') {
     await $.store.set(tempKey(c.project.key), [...new Set([...temp, key])])
   }
   const where = t(c.lang, scope === 'session' ? 'msg.scopeSession' : 'msg.scopeProject')
-  await update($, core, s => ({ ...s, hint: null, message: t(c.lang, 'msg.on', entry.name, where) }))
+  const live = entry.kind === 'plugin' ? await applyNow($) : true
+  await update($, core, s => ({ ...s, hint: null, message: `${t(c.lang, 'msg.on', entry.name, where)} ${takes(c.lang, live)}` }))
 }
 
 /** "No": the tool is not suggested again in this folder. */
@@ -247,26 +254,81 @@ async function undoHere($: any) {
   await say($, 'msg.undone')
 }
 
+
+/** Reads what is installed again, so every list and bar shows the change at once. */
+async function refreshIndex($: any) {
+  const c = await read($, core)
+  const settings = ((await $.settings.read().catch(() => ({}))) ?? {}) as Record<string, unknown>
+  const index = await loadIndex(disk($), c.dir, settings).catch(() => null)
+  if (index) await update($, core, s => ({ ...s, index }))
+}
+
+/** Plugin changes are loaded by Claude Code only when asked: ask it to now (`/reload-plugins`), then redraw from what is installed. Says whether it took effect. */
+async function applyNow($: any): Promise<boolean> {
+  let ok = false
+  try {
+    // Only said to be active when the command exists in this build and answered without an error.
+    const offered = ((await $.command.list().catch(() => [])) as { name?: string }[]).some(x => String(x.name ?? '').replace(/^\//, '') === 'reload-plugins')
+    if (offered) {
+      const r = await $.command.run({ command: 'reload-plugins', args: '' })
+      ok = !/unknown|not found|error|failed/i.test(String(r?.text ?? ''))
+    }
+  } catch {
+    // This build does not offer it from a mod: the change waits for the next chat, and Helm says so.
+  }
+  await refreshIndex($)
+  return ok
+}
+
+/** The sentence that closes a change: active now, or from the next chat. */
+const takes = (lang: Lang, now: boolean) => t(lang, now ? 'msg.now' : 'msg.later')
+
 // ---- the health of the global setup ----
 
 async function runCheckup($: any) {
   const c = await read($, core)
   await work($, 'msg.checking')
-  const report = await checkup(disk($), c.dir).catch(() => [])
+  const found = await checkup(disk($), c.dir).catch(() => [])
+  const report = [...found, ...review(c.index ?? [], c.uses, c.tracked)]
   await update($, core, s => ({ ...s, report, confirm: null, busy: false, message: report.length ? t(c.lang, 'g.todo', report.length) : t(c.lang, 'msg.healthy') }))
 }
 
+/** Updates every plugin (trying each scope it may sit in) and every skill folder that is a git checkout, and says what happened to each. */
 async function runUpdate($: any) {
   const c = await read($, core)
-  const ids = (c.index ?? []).filter(x => x.kind === 'plugin').map(x => x.key.slice(7))
-  await work($, 'msg.updating', ids.length)
-  let ok = 0
-  for (const argv of updateAll(ids)) {
-    const r = await $.process.run(argv, { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
-    if (r.exitCode === 0) ok += 1
+  const index = c.index ?? []
+  const plugins = index.filter(x => x.kind === 'plugin')
+  const rows: Core['updates'] extends infer U ? (U extends { rows: infer R } ? R : never) : never = [] as any
+  let done = 0
+  for (const e of plugins) {
+    await work($, 'msg.updating', `${done += 1}/${plugins.length}`)
+    const id = e.key.slice(7)
+    let result: { state: 'current' | 'updated' | 'failed'; note?: string } = { state: 'failed' }
+    for (const scope of ['user', 'project', 'local']) {
+      const r = await $.process.run(['claude', 'plugin', 'update', id, '--scope', scope], { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1, stdout: '', stderr: '' }))
+      result = readUpdate(r.exitCode, `${r.stdout ?? ''}\n${r.stderr ?? ''}`)
+      if (result.state !== 'failed') break
+    }
+    rows.push({ id, name: e.name, ...result })
+  }
+  let unsourced = 0
+  for (const e of index.filter(x => x.kind === 'skill')) {
+    const dir = `${c.dir}/skills/${e.key.slice(6)}`
+    if (!(await $.fs.exists(`${dir}/.git`))) {
+      unsourced += 1
+      continue
+    }
+    const r = await $.process.run(['git', '-C', dir, 'pull', '--ff-only'], { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1, stdout: '', stderr: '' }))
+    const text = `${r.stdout ?? ''}\n${r.stderr ?? ''}`
+    rows.push({ id: e.key, name: e.name, ...(r.exitCode !== 0 ? { state: 'failed' as const, note: text.trim().split('\n').slice(-1)[0]?.slice(0, 140) } : /already up to date/i.test(text) ? { state: 'current' as const } : { state: 'updated' as const }) })
   }
   if (c.scanner.state === 'ready') await updateScanner($, true)
-  await say($, 'msg.updated', ok, ids.length)
+  const updates = { at: await $.clock.now(), rows, unsourced }
+  await $.store.set('updates', updates)
+  const failed = rows.filter(x => x.state === 'failed').length
+  const changed = rows.some(x => x.state === 'updated')
+  const live = changed ? await applyNow($) : true
+  await update($, core, s => ({ ...s, updates, busy: false, failed: failed > 0, message: `${t(c.lang, 'msg.updated', rows.length - failed, rows.length)}${changed ? ` ${takes(c.lang, live)}` : ''}` }))
 }
 
 /**
@@ -304,8 +366,9 @@ async function fixIssue($: any, key: string) {
   await work($, 'msg.removing', issue.a)
   const done = issue.kind === 'stale-plugin' ? await removePlugin($, c.dir, issue.a) : await $.process.run(issue.fix, { timeoutMs: 60_000 }).then((r: any) => ({ ok: r.exitCode === 0, why: String(r.stderr ?? '') })).catch(() => ({ ok: false, why: '' }))
   if (!done.ok) return fail($, 'msg.cannotFix', done.why, issue.a)
-  // The index drops the plugin too, so the map and the lists match what is installed.
+  // The index drops the plugin too, so the lists match what is installed, and Claude Code is asked to let go of it now.
   await update($, core, s => ({ ...s, index: (s.index ?? []).filter(x => x.key !== key) }))
+  await applyNow($)
   await runCheckup($)
 }
 
@@ -315,7 +378,7 @@ const gh = ($: any, args: string[]) => $.process.run(['gh', ...args], { timeoutM
 const RAW = ['-H', 'Accept: application/vnd.github.raw']
 
 /** Reads a repo the way a careful person would: its page, then whether it holds a plugin catalog or one skill. */
-async function inspect($: any, repo: string): Promise<Found | null> {
+async function inspect($: any, repo: string, quiet = false): Promise<Found | null> {
   const page = await gh($, ['api', `repos/${repo}`])
   if (page.exitCode !== 0) return null
   const r = JSON.parse(page.stdout)
@@ -349,31 +412,140 @@ async function inspect($: any, repo: string): Promise<Found | null> {
   const target = repoTarget(meta.repo)
   let scan: ScanResult | null = null
   if (verdict.level !== 'no' && target && scanner === 'ready') {
-    await say($, 'msg.scanning')
+    if (!quiet) await say($, 'msg.scanning')
     scan = await scanOne($, target)
   }
   if (verdict.level !== 'no') verdict = foldVerdict(verdict, scan, scanner)
   return { meta, verdict, scan }
 }
 
-async function research($: any, input: string) {
+/** One name or link, looked at on its own: a verdict card for a repository, a short list of hits for a name. */
+async function lookAt($: any, item: Item) {
   const c = await read($, core)
-  const target = parseTarget(input)
-  await update($, core, s => ({ ...s, found: null, hits: null, message: t(c.lang, target.kind === 'none' ? 'msg.type' : 'msg.looking') }))
-  if (target.kind === 'repo') {
-    const found = await inspect($, target.repo)
+  if (item.kind === 'other') return say($, 'batch.unsupported')
+  if (item.kind === 'repo') {
+    const found = await inspect($, item.repo)
     return void (await update($, core, s => ({ ...s, found, message: found ? null : t(c.lang, 'msg.noRead') })))
   }
-  if (target.kind === 'search') {
-    const r = await gh($, ['search', 'repos', target.query, '--limit', '5', '--json', 'fullName,description,stargazersCount'])
-    let hits: Hit[] = []
-    try {
-      hits = JSON.parse(r.stdout).map((x: any) => ({ repo: x.fullName, description: String(x.description ?? ''), stars: Number(x.stargazersCount ?? 0) }))
-    } catch {
-      // No usable answer: no hits.
-    }
-    await update($, core, s => ({ ...s, hits, message: hits.length ? null : t(c.lang, 'msg.nothing') }))
+  const r = await gh($, ['search', 'repos', item.query, '--limit', '5', '--json', 'fullName,description,stargazersCount'])
+  let hits: Hit[] = []
+  try {
+    hits = JSON.parse(r.stdout).map((x: any) => ({ repo: x.fullName, description: String(x.description ?? ''), stars: Number(x.stargazersCount ?? 0) }))
+  } catch {
+    // No usable answer: no hits.
   }
+  await update($, core, s => ({ ...s, hits, message: hits.length ? null : t(c.lang, 'msg.nothing') }))
+}
+
+/** What was typed or pasted: a link, a name, or a whole text with many of them. A text with none in it is read by the small model. */
+async function research($: any, input: string) {
+  const c = await read($, core)
+  await update($, core, s => ({ ...s, found: null, hits: null, batch: null, message: t(c.lang, 'msg.looking') }))
+  let items = parseItems(input)
+  if (items.length === 0 && input.trim().split(/\s+/).length >= 4) {
+    // Plain prose: ask the small model which tools the text means, once, and read its answer the same way.
+    await say($, 'msg.refining')
+    const r = await $.model
+      .complete({ model: 'haiku', prompt: `List the GitHub repositories (owner/name) or tool names this person wants, one per line, nothing else:\n\n${input.slice(0, 4000)}`, maxTokens: 200 })
+      .catch(() => ({ isAnswered: false }))
+    if (r.isAnswered) items = parseItems(String(r.text ?? ''))
+  }
+  if (items.length === 0) return say($, 'msg.type')
+  if (items.length === 1) return lookAt($, items[0])
+  return runBatch($, items)
+}
+
+const setRow = ($: any, i: number, patch: Partial<BatchRow>) => update($, core, s => ({ ...s, batch: s.batch ? s.batch.map((row, j) => (j === i ? { ...row, ...patch } : row)) : s.batch }))
+
+/** Checks every item of a pasted list, three at a time: a repository on its own, a name by searching and taking the first hit that fits. Nothing is installed here. */
+async function runBatch($: any, items: Item[]) {
+  const c = await read($, core)
+  const rows: BatchRow[] = items.map(it => ({ label: it.kind === 'repo' ? it.repo : it.kind === 'search' ? it.query : it.url, state: it.kind === 'other' ? 'unsupported' : 'wait', found: null, pick: false }))
+  await update($, core, s => ({ ...s, batch: rows, busy: true, message: t(c.lang, 'msg.batchLooking', 0, rows.length) }))
+  let next = 0
+  let done = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      const it = items[i]
+      if (it.kind === 'other') {
+        done += 1
+        continue
+      }
+      await setRow($, i, { state: 'check' })
+      let found: Found | null = null
+      let via: string | undefined
+      if (it.kind === 'repo') found = await inspect($, it.repo, true)
+      else {
+        const r = await gh($, ['search', 'repos', it.query, '--limit', '3', '--json', 'fullName,stargazersCount'])
+        let hits: { fullName: string }[] = []
+        try {
+          hits = JSON.parse(r.stdout)
+        } catch {
+          // No usable answer: no hits.
+        }
+        for (const h of hits) {
+          const f = await inspect($, h.fullName, true)
+          if (f && (!found || (found.verdict.level === 'no' && f.verdict.level !== 'no'))) {
+            found = f
+            via = h.fullName
+          }
+          if (found && found.verdict.level !== 'no') break
+        }
+      }
+      await setRow($, i, found ? { state: 'done', found, via, pick: found.verdict.level === 'ok' } : { state: 'missing' })
+      done += 1
+      await update($, core, s => ({ ...s, message: done < items.length ? t(c.lang, 'msg.batchLooking', done, items.length) : s.message }))
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(3, items.length) }, worker))
+  const after = (await read($, core)).batch ?? []
+  const ready = after.filter(x => x.state === 'done' && x.found && x.found.verdict.level !== 'no').length
+  await update($, core, s => ({ ...s, busy: false, message: t(c.lang, 'msg.batchChecked', after.length, ready) }))
+}
+
+/** Installs the ticked rows, one after the other, after the person's yes. A failure stops that row only. */
+async function installBatch($: any, scope: 'user' | 'local') {
+  const c = await read($, core)
+  const rows = c.batch ?? []
+  const chosen = rows.map((row, i) => ({ row, i })).filter(({ row }) => row.pick && row.state === 'done' && row.found && row.found.verdict.level !== 'no')
+  if (chosen.length === 0) return
+  let ok = 0
+  let candidates = c.candidates
+  const handled = new Set<string>()
+  for (const [n, { row, i }] of chosen.entries()) {
+    // Two lines of a list that meant the same repository are installed once.
+    if (handled.has(row.found!.meta.repo)) {
+      await setRow($, i, { state: 'installed', pick: false })
+      continue
+    }
+    handled.add(row.found!.meta.repo)
+    await update($, core, s => ({ ...s, busy: true, message: t(c.lang, 'msg.batchLooking', n, chosen.length) }))
+    await setRow($, i, { state: 'check' })
+    const meta = row.found!.meta
+    const plan = installPlan(meta, scope, `${c.dir}/skills`)
+    if (!plan) {
+      await setRow($, i, { state: 'failed', why: t(c.lang, 'msg.unknownForm') })
+      continue
+    }
+    let why = ''
+    for (const argv of plan) {
+      const r = await $.process.run(argv, { timeoutMs: 180_000, ...(scope === 'local' && c.project ? { cwd: c.project.root } : {}) }).catch(() => ({ exitCode: -1, stderr: '' }))
+      if (r.exitCode !== 0) {
+        why = `${argv.slice(0, 4).join(' ')} ${String(r.stderr ?? '').trim().split('\n')[0].slice(0, 120)}`.trim()
+        break
+      }
+    }
+    if (why) await setRow($, i, { state: 'failed', why })
+    else {
+      ok += 1
+      candidates = scope === 'local' ? [...new Set([...candidates, meta.repo])] : candidates.filter(x => x !== meta.repo)
+      await setRow($, i, { state: 'installed', pick: false })
+    }
+  }
+  await $.store.set('candidates', candidates)
+  const live = ok > 0 ? await applyNow($) : false
+  await update($, core, s => ({ ...s, busy: false, candidates, message: `${t(c.lang, 'msg.batchDone', ok, chosen.length)}${ok > 0 ? ` ${takes(c.lang, live)}` : ''}` }))
 }
 
 /** Installs after the person's yes. In a project the plugin is installed for that folder only, and remembered as a global candidate. */
@@ -390,7 +562,8 @@ async function install($: any, scope: 'user' | 'local', force = false) {
   const repo = c.found.meta.repo
   const candidates = scope === 'local' ? [...new Set([...c.candidates, repo])] : c.candidates.filter(x => x !== repo)
   await $.store.set('candidates', candidates)
-  await update($, core, s => ({ ...s, candidates, found: null, message: t(c.lang, scope === 'local' ? 'msg.installedHere' : 'msg.installed', repo) }))
+  const live = await applyNow($)
+  await update($, core, s => ({ ...s, candidates, found: null, message: `${t(c.lang, scope === 'local' ? 'msg.installedHere' : 'msg.installed', repo)} ${takes(c.lang, live)}` }))
 }
 
 async function pickHit($: any, repo: string) {
@@ -429,8 +602,8 @@ async function probeScanner($: any) {
 }
 
 /** One scan: the report comes on stdout, and exit 1 only means "do not install". */
-async function scanOne($: any, target: string): Promise<ScanResult | null> {
-  const r = await $.process.run(scanCmd(target), { timeoutMs: 45_000 }).catch(() => null)
+async function scanOne($: any, target: string, timeoutMs = 45_000): Promise<ScanResult | null> {
+  const r = await $.process.run(scanCmd(target), { timeoutMs }).catch(() => null)
   return r ? parseScan(String(r.stdout ?? '')) : null
 }
 
@@ -495,6 +668,19 @@ async function runScan($: any) {
     }
   }
   await Promise.all([worker(), worker(), worker(), worker()])
+  // What timed out gets a second, patient try on its own: "all scanned" must mean all.
+  const missed = targets.filter(x => !scans[x.key])
+  for (const [k, target] of missed.entries()) {
+    await update($, core, s => ({ ...s, scanning: { done: targets.length - missed.length + k, total: targets.length } }))
+    const result = await scanOne($, target.path, 240_000)
+    if (result) {
+      scans[target.key] = result
+      fps[target.key] = await fingerprint($, target.path)
+      skipped -= 1
+      await update($, core, s => ({ ...s, scans: { ...s.scans, [target.key]: result } }))
+    }
+  }
+  const stillMissed = targets.filter(x => !scans[x.key]).map(x => (c.index ?? []).find(e => e.key === x.key)?.name ?? x.key)
   const bad = Object.values(scans).filter(s => s.recommendation !== 'SAFE' && s.flagged > 0).length
   await $.store.set('scans', scans)
   await $.store.set('scan-fps', fps)
@@ -502,8 +688,9 @@ async function runScan($: any) {
     ...s,
     scans,
     scanning: null,
+    skipped: stillMissed,
     busy: false,
-    message: t(c.lang, 'msg.scanDone', targets.length, bad) + (skipped > 0 ? ` ${t(c.lang, 'msg.skipped', skipped)}` : ''),
+    message: t(c.lang, 'msg.scanDone', targets.length, bad) + (stillMissed.length > 0 ? ` ${t(c.lang, 'msg.skipped', stillMissed.length)}` : ''),
   }))
 }
 
@@ -523,7 +710,8 @@ async function toggleTool($: any, key: string) {
     if (next === null) return fail($, 'msg.badjson', '')
     await $.fs.write(file, next)
   }
-  await update($, core, s => ({ ...s, index: (s.index ?? []).map(x => (x.key === key ? { ...x, on: !off } : x)), message: t(c.lang, off ? 'msg.switchedOff' : 'msg.switchedOn', entry.name) }))
+  const live = entry.kind === 'plugin' ? await applyNow($) : true
+  await update($, core, s => ({ ...s, index: (s.index ?? []).map(x => (x.key === key ? { ...x, on: !off } : x)), message: `${t(c.lang, off ? 'msg.switchedOff' : 'msg.switchedOn', entry.name)} ${takes(c.lang, live)}` }))
 }
 
 /** "Install anyway": only when the scanner alone said no, and only on a second press. */
@@ -572,10 +760,23 @@ export const register: Register = on => {
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
     const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
-    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, puses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, failed: false, ask: null }))
+    // How long usage has been recorded: the clock starts the first time Helm runs, so "never used" is judged only after a fair time.
+    const startedAt = Number((await $.store.get('tracking-since')) ?? 0) || (await $.clock.now())
+    await $.store.set('tracking-since', startedAt)
+    const tracked = Math.floor(((await $.clock.now()) - startedAt) / 86_400_000)
+    const updates = ((await $.store.get('updates')) as Core['updates'] | undefined) ?? null
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, puses, hint: null, used: {}, tick: 0, found: null, hits: null, batch: null, setup, candidates, dir: configDir, message: null, report: null, tracked, updates, skipped: [], confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, failed: false, ask: null }))
     await refreshUsage($)
     void runCheckup($).catch(() => {})
     await probeScanner($)
+    // Once a day, in the background, scan what is new or changed since the last scan: nothing to press.
+    const lastScan = Number((await $.store.get('auto-scan')) ?? 0)
+    const nowAt = await $.clock.now()
+    const after = await read($, core)
+    if (after.scanner.state === 'ready' && nowAt - lastScan > 86_400_000 && (after.index ?? []).some(x => !after.scans[x.key])) {
+      await $.store.set('auto-scan', nowAt)
+      void runScan($).catch(() => {})
+    }
     const checked = Number((await $.store.get('scanner-checked')) ?? 0)
     const now = await $.clock.now()
     if ((await read($, core)).scanner.state === 'ready' && now - checked > WEEK) {
@@ -705,6 +906,9 @@ export const register: Register = on => {
       item: (id: string) => void setSetup($, toggleItem(id)),
       details: (text: string) => void setSetup($, s => ({ ...s, details: text })),
       research: (text: string) => void research($, text),
+      pickRow: (i: number) => void update($, core, s => ({ ...s, batch: s.batch ? s.batch.map((row, j) => (j === i ? { ...row, pick: !row.pick } : row)) : s.batch })),
+      installBatch: (scope: 'user' | 'local') => void installBatch($, scope),
+      clearBatch: () => void update($, core, s => ({ ...s, batch: null, message: null })),
       pick: (repo: string) => void pickHit($, repo),
       install: (scope: 'user' | 'local') => void install($, scope),
       check: () => void runCheckup($),

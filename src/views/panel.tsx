@@ -8,7 +8,8 @@ import { LANGS, t } from '../i18n'
 import type { Key, Lang } from '../i18n'
 import { shortlist } from '../shortlist'
 import { estimateTokens, refinePrompt } from '../suggest'
-import { flagged, isOverridable } from '../skillspector'
+import { flagged, isOverridable, watched } from '../skillspector'
+import { LEARNING_DAYS } from '../health'
 import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
@@ -26,6 +27,9 @@ export type Act = {
   item: (id: string) => void
   details: (text: string) => void
   research: (text: string) => void
+  pickRow: (i: number) => void
+  installBatch: (scope: 'user' | 'local') => void
+  clearBatch: () => void
   pick: (repo: string) => void
   install: (scope: 'user' | 'local') => void
   check: () => void
@@ -53,7 +57,7 @@ const WHY: Record<string, Key> = {
   noscanner: 'why.noscanner',
   testsOnly: 'why.testsOnly',
 }
-const ISSUE: Record<string, Key> = { 'stale-plugin': 'issue.stale', 'broken-skill': 'issue.broken', 'no-description': 'issue.nodesc', duplicate: 'issue.dup' }
+const ISSUE: Record<string, Key> = { 'stale-plugin': 'issue.stale', 'broken-skill': 'issue.broken', 'no-description': 'issue.nodesc', duplicate: 'issue.dup', similar: 'issue.similar', unused: 'issue.unused' }
 const ITEM_LABEL: Record<string, Key> = { license: 'gh.licenseFile', protection: 'gh.branch', community: 'gh.contributing' }
 
 const hex = (cat: string) => `#${(COLOR[cat] ?? COLOR.other).toString(16).padStart(6, '0')}`
@@ -134,6 +138,51 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
               <Text dimColor wrap="truncate-end">{`${h.stars}★  ${h.description}`}</Text>
             </Box>
           ))}
+        </Box>
+      )}
+      {c.batch && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text bold>{T('batch.title', c.batch.length)}</Text>
+          {c.batch.map((row, i) => {
+            const f = row.found
+            const level = f?.verdict.level
+            const color = row.state === 'installed' ? 'success' : row.state === 'failed' ? 'error' : row.state === 'wait' || row.state === 'check' ? 'suggestion' : row.state === 'missing' || row.state === 'unsupported' ? 'inactive' : level ? LEVEL[level] : 'inactive'
+            const mark = row.state === 'installed' ? '✓' : row.state === 'failed' ? '✗' : row.state === 'wait' || row.state === 'check' ? '◌' : row.state === 'missing' || row.state === 'unsupported' ? '?' : level === 'ok' ? '●' : level === 'caution' ? '▲' : '✗'
+            const ready = row.state === 'done' && !!f && level !== 'no'
+            const note =
+              row.state === 'wait' || row.state === 'check'
+                ? T('batch.checking')
+                : row.state === 'missing'
+                  ? T('batch.missing')
+                  : row.state === 'unsupported'
+                    ? T('batch.unsupported')
+                    : row.state === 'installed'
+                      ? T('batch.installed')
+                      : row.state === 'failed'
+                        ? `${T('batch.failed')}${row.why ? `: ${row.why}` : ''}`
+                        : [T(level === 'ok' ? 'verdict.ok' : level === 'caution' ? 'verdict.caution' : 'verdict.no'), ...(f?.verdict.reasons ?? []).map(r => T(WHY[r.k], r.n ?? 0)), ...(row.via ? [T('batch.matched', row.via)] : [])].join(' · ')
+            return (
+              <Box key={`b-${i}`} flexDirection="column" marginTop={1}>
+                <Box columnGap={1}>
+                  {ready ? <Button key={`b-pick-${i}`} label={row.pick ? '☑' : '☐'} plain onPress={() => act.pickRow(i)} /> : <Text color={color}>{mark}</Text>}
+                  <Text bold>{f?.meta.repo ?? row.label}</Text>
+                  {f && <Text dimColor>{`${f.meta.license ?? '—'} · ${f.meta.stars}★`}</Text>}
+                </Box>
+                <Text color={color} dimColor wrap="truncate-end">{`   ${note}`}</Text>
+              </Box>
+            )
+          })}
+          <Box marginTop={1} columnGap={1}>
+            {c.batch.some(row => row.pick && row.state === 'done') && (
+              <Button
+                key="b-install"
+                label={`${here && n.tab === 'project' ? T('install.here') : T('install.all')} · ${c.batch.filter(row => row.pick && row.state === 'done').length}`}
+                variant="primary"
+                onPress={() => act.installBatch(here && n.tab === 'project' ? 'local' : 'user')}
+              />
+            )}
+            <Button key="b-clear" label={T('batch.clear')} plain onPress={act.clearBatch} />
+          </Box>
         </Box>
       )}
       {c.found && (
@@ -323,15 +372,30 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
   const never = index.filter(x => !c.uses[x.key]?.n).length
   // A state kept across a reload may predate this field.
   const open = n.open ?? []
-  const attention = (report?.length ?? 0) + flaggedList.length
-  const measured = report !== null || Object.keys(c.scans).length > 0
-  const overall = !measured ? 'subtle' : flaggedList.length > 0 ? '#ff7a6b' : attention > 0 ? '#f2b84b' : '#6fd08c'
+  // What each tile can honestly say. A green mark means the whole thing was looked at and nothing is left to do:
+  // anything not yet looked at, not finished or not known is said, never rounded up to "all good".
+  const unscanned = index.filter(x => !c.scans[x.key])
+  const cautions = Object.entries(c.scans).filter(([key, sc]) => sc.recommendation !== 'SAFE' && sc.flagged > 0 && !flaggedList.some(f => f[0] === key))
+  const learning = report !== null && report.length === 0 && c.tracked < LEARNING_DAYS
+  const healthGood = report !== null && report.length === 0 && !learning
+  const secKnown = c.scanner.state === 'ready' && Object.keys(c.scans).length > 0
+  const secGood = secKnown && !c.scanning && unscanned.length === 0 && flaggedList.length === 0 && cautions.length === 0
+  const upd = c.updates
+  const updFailed = upd ? upd.rows.filter(r => r.state === 'failed') : []
+  const updGood = !!upd && updFailed.length === 0
+  const known = report !== null && secKnown && !!upd
+  const attention = (report?.length ?? 0) + flaggedList.length + cautions.length + (unscanned.length > 0 && secKnown ? 1 : 0) + updFailed.length
+  const allGood = known && healthGood && secGood && updGood
+  const overall = !known ? 'subtle' : flaggedList.length > 0 ? '#ff7a6b' : allGood ? '#6fd08c' : '#f2b84b'
   const tw = Math.max(22, Math.floor((width - 7) / 3))
   const tile = (key: string, color: string, children: any) => (
     <Box key={`tile-${key}`} flexDirection="column" borderStyle="round" borderColor={color} paddingX={1} flexGrow={1} minWidth={tw}>
       {children}
     </Box>
   )
+  const healthColor = report === null ? 'subtle' : report.length > 0 ? '#f2b84b' : learning ? '#5aa9ff' : '#6fd08c'
+  const secColor = flaggedList.length > 0 ? '#ff7a6b' : secGood ? '#6fd08c' : secKnown ? '#f2b84b' : 'subtle'
+  const shown = (report ?? []).slice(0, 6)
 
   // The status section: health, updates and security side by side in one card, with the verdict on top.
   const status = card(
@@ -339,9 +403,9 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
     <Box flexDirection="column">
       <Box justifyContent="space-between">
         {title(T('g.status'), overall)}
-        {measured ? (
-          <Text bold color={attention > 0 ? 'warning' : 'success'}>
-            {attention > 0 ? `▲ ${T('g.todo', attention)}` : `✓ ${T('g.good')}`}
+        {known ? (
+          <Text bold color={allGood ? 'success' : 'warning'}>
+            {allGood ? `✓ ${T('g.good')}` : learning && attention === 0 ? `● ${T('g.learning', Math.min(c.tracked + 1, LEARNING_DAYS), LEARNING_DAYS)}` : `▲ ${T('g.todo', attention)}`}
           </Text>
         ) : (
           <Text dimColor>{T('g.unchecked')}</Text>
@@ -350,16 +414,26 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
       <Box flexDirection="row" flexWrap="wrap" columnGap={1} rowGap={1} marginTop={1}>
         {tile(
           'health',
-          report && report.length > 0 ? '#f2b84b' : '#6fd08c',
+          healthColor,
           <Box flexDirection="column">
-            {title(T('g.health'), report && report.length > 0 ? '#f2b84b' : '#6fd08c')}
-            {report === null ? <Text dimColor>{T('g.unchecked')}</Text> : report.length === 0 ? <Text color="success" bold>{`✓ ${T('g.good')}`}</Text> : <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>}
-            {(report ?? []).map(i => (
+            {title(T('g.health'), healthColor)}
+            {report === null ? (
+              <Text dimColor>{T('g.unchecked')}</Text>
+            ) : report.length > 0 ? (
+              <Text color="warning" bold>{`▲ ${T('g.todo', report.length)}`}</Text>
+            ) : learning ? (
+              <Text color="suggestion">{`● ${T('g.learning', Math.min(c.tracked + 1, LEARNING_DAYS), LEARNING_DAYS)}`}</Text>
+            ) : (
+              <Text color="success" bold>{`✓ ${T('g.good')}`}</Text>
+            )}
+            {shown.map(i => (
               <Box key={`issue-${i.key}${i.kind}`} flexDirection="column" marginTop={1}>
                 <Text>{issueText(i)}</Text>
                 {i.fix && <Button key={`fix-${i.key}`} label={c.confirm === i.key ? T('g.again') : T('g.remove')} onPress={() => act.fix(i.key)} />}
+                {(i.kind === 'similar' || i.kind === 'unused') && <Button key={`off-${i.key}`} label={T('sec.off')} onPress={() => act.toggle(i.key)} />}
               </Box>
             ))}
+            {(report ?? []).length > shown.length && <Text dimColor>{T('g.more', (report ?? []).length - shown.length)}</Text>}
             <Box flexGrow={1} />
             <Box marginTop={1}>
               <Button key="check" label={T('g.recheck')} onPress={act.check} />
@@ -368,10 +442,18 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
         )}
         {tile(
           'updates',
-          '#5aa9ff',
+          updFailed.length > 0 ? '#f2b84b' : upd ? '#6fd08c' : '#5aa9ff',
           <Box flexDirection="column">
-            {title(T('g.updates'), '#5aa9ff')}
-            <Text dimColor>{T('g.updatesText')}</Text>
+            {title(T('g.updates'), updFailed.length > 0 ? '#f2b84b' : upd ? '#6fd08c' : '#5aa9ff')}
+            {!upd && <Text dimColor>{T('g.updatesText')}</Text>}
+            {upd && updFailed.length === 0 && <Text color="success" bold>{`✓ ${T('up.current', upd.rows.length)}`}</Text>}
+            {upd && updFailed.length > 0 && <Text color="warning" bold>{`▲ ${T('up.failed', updFailed.length)}`}</Text>}
+            {upd && upd.rows.some(r => r.state === 'updated') && <Text dimColor>{T('up.updated', upd.rows.filter(r => r.state === 'updated').length)}</Text>}
+            {updFailed.slice(0, 4).map(r => (
+              <Text key={`uf-${r.id}`} dimColor wrap="truncate-end">{`${r.name}${r.note ? `: ${r.note}` : ''}`}</Text>
+            ))}
+            {upd && upd.unsourced > 0 && <Text dimColor>{T('up.manual', upd.unsourced)}</Text>}
+            {upd && <Text dimColor>{ago(now - upd.at)}</Text>}
             <Box flexGrow={1} />
             <Box marginTop={1}>
               <Button key="update" label={T('g.update')} onPress={act.update} />
@@ -380,15 +462,15 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
         )}
         {tile(
           'security',
-          flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c',
+          secColor,
           <Box flexDirection="column">
-            {title(T('sec.title'), flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c')}
+            {title(T('sec.title'), secColor)}
             {c.scanner.state === 'missing' && <Text dimColor>{T('sec.missing')}</Text>}
-            {c.scanner.state === 'ready' && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
+            {c.scanner.state === 'ready' && !secGood && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
             {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done, c.scanning.total)}</Text>}
-            {!c.scanning && c.scanner.state === 'ready' && Object.keys(c.scans).length > 0 && flaggedList.length === 0 && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
+            {secGood && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
             {flaggedList.length > 0 && <Text color="error" bold>{`▲ ${T('sec.flagged', flaggedList.length)}`}</Text>}
-            {flaggedList.slice(0, 4).map(([key, s]) => {
+            {[...flaggedList, ...cautions].slice(0, 4).map(([key, s]) => {
               const entry = index.find(x => x.key === key)
               return (
                 <Box key={`row-${key}`} flexDirection="column" marginTop={1}>
@@ -398,6 +480,12 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang }: Pro
                 </Box>
               )
             })}
+            {secKnown && !c.scanning && unscanned.length > 0 && (
+              <Box flexDirection="column" marginTop={1}>
+                <Text color="warning" bold>{`▲ ${T('sec.unscanned', unscanned.length)}`}</Text>
+                <Text dimColor wrap="truncate-end">{unscanned.slice(0, 3).map(x => x.name).join(', ')}</Text>
+              </Box>
+            )}
             <Box flexGrow={1} />
             <Box marginTop={1}>
               {c.scanner.state === 'ready' ? <Button key="scan" label={T('sec.scan')} onPress={act.scan} /> : <Button key="scanner-install" label={T('sec.install')} onPress={act.installScanner} />}

@@ -4,26 +4,30 @@
 
 import type { Entry } from '../types'
 
-export const CATEGORIES = ['build', 'write', 'research', 'design', 'web', 'data', 'security', 'docs', 'setup', 'other'] as const
+export const CATEGORIES = ['build', 'write', 'research', 'science', 'design', 'web', 'data', 'security', 'business', 'docs', 'setup', 'other'] as const
 export type Category = (typeof CATEGORIES)[number]
 
 // A word that points at a category. A stem matches the start of a word, so "program" covers
 // "programming". The category with the most hits wins; on a tie the earlier one in CATEGORIES does.
+// Nothing here knows a person's own tools: a new install is sorted from what each one says about itself.
 const STEMS: Record<Exclude<Category, 'other'>, string[]> = {
-  build: ['code', 'coding', 'debug', 'test', 'refactor', 'git', 'github', 'commit', 'typescript', 'javascript', 'python', 'rust', 'api', 'develop', 'program', 'tdd', 'lint', 'compil', 'script', 'function', 'repo', 'pull', 'engineer', 'software', 'react', 'node', 'backend', 'frontend', 'deploy', 'build'],
-  write: ['write', 'writing', 'edit', 'draft', 'prose', 'copy', 'tone', 'voice', 'humaniz', 'blog', 'essay', 'article', 'translat', 'grammar'],
-  research: ['research', 'paper', 'literature', 'cite', 'citation', 'scholar', 'science', 'scientific', 'hypothes', 'study', 'survey', 'analy', 'chem', 'medical', 'clinical'],
-  design: ['design', 'ui', 'ux', 'interface', 'brand', 'logo', 'layout', 'figma', 'palette', 'typograph', 'diagram', 'visual', 'illustrat', 'image', 'icon'],
-  web: ['seo', 'website', 'web', 'browser', 'scrap', 'crawl', 'ecommerce', 'marketing', 'campaign', 'newsletter', 'sitemap', 'ads', 'social'],
-  data: ['data', 'sql', 'database', 'dataset', 'csv', 'spreadsheet', 'excel', 'chart', 'plot', 'statistic', 'dataframe', 'pandas', 'machine', 'model', 'train'],
-  security: ['security', 'secure', 'vulnerab', 'exploit', 'malware', 'threat', 'forensic', 'pentest', 'penetration', 'owasp', 'cve', 'crypto', 'incident', 'compliance', 'audit'],
-  docs: ['doc', 'pdf', 'word', 'slide', 'presentation', 'pptx', 'docx', 'xlsx', 'report', 'readme', 'changelog', 'markdown', 'notes'],
-  setup: ['setup', 'config', 'configur', 'skill', 'plugin', 'memory', 'plan', 'workflow', 'organiz', 'session', 'agent', 'hook', 'claude'],
+  build: ['code', 'coding', 'debug', 'test', 'refactor', 'git', 'github', 'commit', 'typescript', 'javascript', 'python', 'rust', 'api', 'develop', 'program', 'tdd', 'lint', 'compil', 'script', 'function', 'repo', 'pull', 'engineer', 'software', 'react', 'node', 'backend', 'frontend', 'deploy', 'build', 'docker', 'kubernetes', 'devops', 'terraform', 'cloud', 'server', 'cli', 'terminal', 'sdk', 'library', 'package', 'architect'],
+  write: ['write', 'writing', 'edit', 'draft', 'prose', 'copy', 'tone', 'voice', 'humaniz', 'blog', 'essay', 'article', 'translat', 'grammar', 'thesis', 'dissert', 'tesi', 'latex', 'manuscript', 'author', 'story', 'poem', 'letter', 'cover'],
+  research: ['research', 'paper', 'literature', 'cite', 'citation', 'scholar', 'hypothes', 'study', 'survey', 'analy', 'review', 'evidence', 'peer', 'brainstorm', 'critical', 'journal', 'preprint'],
+  science: ['science', 'scientific', 'lab', 'laborator', 'quantum', 'qubit', 'qiskit', 'cirq', 'chem', 'molecul', 'genom', 'gene', 'protein', 'bio', 'neuro', 'physic', 'astro', 'spectr', 'mass', 'sequenc', 'cell', 'drug', 'pharma', 'medic', 'clinic', 'imaging', 'microscop', 'robot', 'material', 'simulat', 'ecolog', 'climate', 'geo', 'math', 'experiment', 'protocol', 'dicom', 'omics', 'patient', 'health'],
+  design: ['design', 'ui', 'ux', 'interface', 'brand', 'logo', 'layout', 'figma', 'palette', 'typograph', 'diagram', 'visual', 'illustrat', 'image', 'icon', 'animation', 'animat', 'scroll', 'landing', 'css', 'style', 'theme', 'color', 'font'],
+  web: ['seo', 'website', 'web', 'browser', 'scrap', 'crawl', 'ecommerce', 'campaign', 'newsletter', 'sitemap', 'ads', 'social', 'http', 'url', 'search', 'link'],
+  data: ['data', 'sql', 'database', 'dataset', 'csv', 'spreadsheet', 'excel', 'chart', 'plot', 'statistic', 'dataframe', 'pandas', 'machine', 'model', 'train', 'neural', 'tensor', 'learning', 'forecast', 'predict', 'regress', 'cluster', 'embedding', 'graph'],
+  security: ['security', 'secure', 'vulnerab', 'exploit', 'malware', 'threat', 'forensic', 'pentest', 'penetration', 'owasp', 'cve', 'crypto', 'incident', 'compliance', 'audit', 'attack', 'phishing', 'ransomware', 'detect', 'hardening', 'encrypt'],
+  business: ['sales', 'crm', 'lead', 'finance', 'financial', 'account', 'invoice', 'budget', 'legal', 'contract', 'recruit', 'hiring', 'interview', 'resume', 'cv', 'career', 'job', 'candidat', 'product', 'roadmap', 'customer', 'support', 'ticket', 'okr', 'strategy', 'startup', 'market', 'pricing', 'vendor', 'meeting', 'stakeholder', 'grant', 'hr', 'people', 'onboard', 'enterprise', 'operation'],
+  docs: ['doc', 'pdf', 'word', 'slide', 'presentation', 'pptx', 'docx', 'xlsx', 'report', 'readme', 'changelog', 'markdown', 'notes', 'office', 'poster', 'template'],
+  // Words every description uses ("skill", "plugin", "claude", "agent") say nothing, so they are not here.
+  setup: ['setup', 'config', 'configur', 'memory', 'workflow', 'organiz', 'session', 'hook', 'loop', 'goal', 'stack', 'observ', 'radar', 'token', 'compress', 'terse', 'concise', 'lazy', 'adhd', 'habit', 'productiv', 'routine', 'schedul', 'automat', 'prompt', 'persona', 'caveman', 'ponytail', 'superpower', 'lesson', 'extras', 'creator', 'autoskill', 'skillopt'],
 }
 
 const words = (text: string): string[] => text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)
 
-/** The category a name and a description point at; `other` when nothing does. */
+/** The category a name and a description point at; `other` only when nothing does. A name that runs words together ("pylabrobot") is read by the stems inside it. */
 export function categorize(name: string, description: string): Category {
   const found = words(`${name} ${name} ${description}`)
   let best: Category = 'other'
@@ -36,7 +40,19 @@ export function categorize(name: string, description: string): Category {
       best = id
     }
   }
-  return best
+  if (best !== 'other') return best
+  const joined = name.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  for (const id of CATEGORIES) {
+    if (id === 'other') continue
+    const score = STEMS[id].filter(stem => stem.length >= 4 && joined.includes(stem)).length
+    if (score > top) {
+      top = score
+      best = id
+    }
+  }
+  if (best !== 'other') return best
+  // Last resort: a tool whose only word is about Claude Code itself is a setup tool.
+  return /skill|plugin|claude|agent/.test(joined) ? 'setup' : 'other'
 }
 
 /** `name` and `description` from the frontmatter of a SKILL.md, however it is quoted. */

@@ -17,12 +17,12 @@ Ogni settimana escono nuovi plugin, skill e strumenti. Helm è il posto in Claud
 ## Cosa fa
 
 - **Prepara un progetto.** Apri una cartella nuova e Helm chiede cosa stai costruendo. Propone gli strumenti adatti tra quelli già installati, e un solo tasto li accende solo per quella cartella. Annulla rimette la cartella esattamente com'era.
-- **Controlla uno strumento.** Incolla un link GitHub, `owner/nome` o solo un nome. Helm legge il repository (licenza, se è archiviato, ultimo aggiornamento, stelle, e se contiene un plugin o una skill), dà un verdetto in parole semplici e installa solo dopo il tuo sì. Uno strumento aggiunto per un progetto viene poi proposto per tutti.
+- **Controlla uno strumento, o un intero elenco.** Incolla un link GitHub, `owner/nome`, un nome o un testo intero pieno di questi. Helm legge ogni repository (licenza, se è archiviato, ultimo aggiornamento, stelle, e se contiene un plugin o una skill), lo scansiona, dà un verdetto in parole semplici per ogni riga e installa solo ciò che spunti. Le modifiche valgono subito quando Claude Code lo permette. Uno strumento aggiunto per un progetto viene poi proposto per tutti.
 - **Vedi cosa è in uso qui.** In cima alla pagina **Project** compare solo ciò che Claude ha usato in questa cartella, per categoria, con quante volte e quando. Una skill appena usata è accesa. Non costa token.
 - **Tieni i limiti sott'occhio.** Una riga discreta sopra il prompt mostra i limiti delle 5 ore e della settimana e il contesto come piccole barre, più la skill che Claude sta usando, con un puntino di sicurezza e il tasto **Open Helm**. I valori seguono la sessione mentre lavora.
 - **Parla la tua lingua.** 16 lingue, di default quella del computer, cambiabile dal pannello.
 - **Controlla prima di fidarti.** [SkillSpector](https://github.com/NVIDIA/SkillSpector) di NVIDIA scansiona ogni skill e plugin che hai, e ogni strumento nuovo prima che si possa installare, cercando prompt injection, furto di dati e codice rischioso. Se la scansione dice "non installare", il tasto Installa sparisce. È solo analisi statica: nessun modello, nessuna chiave, niente esce dal computer. Helm lo tiene aggiornato.
-- **Tienila in salute.** La sezione **Stato** della scheda Globale controlla plugin con i file spariti, cartelle di skill rotte, skill senza descrizione e nomi doppi (da sola all'avvio e dopo ogni correzione), aggiorna tutti i plugin con un tasto e cerca skill rischiose. Togliere un plugin funziona qualunque sia lo scope in cui è installato. Niente di questo tocca le impostazioni di un progetto. Sotto, ogni strumento e skill è raccolto per categoria: premi un nome per vedere cos'è e cosa fa.
+- **Tienila in salute, e saperlo.** La sezione **Stato** della scheda Globale dice solo ciò che ha davvero controllato. Salute guarda file rotti, doppioni, strumenti che fanno lo stesso lavoro e skill mai usate (dopo due settimane di osservazione). Aggiornamenti legge l'esito di ogni plugin. Sicurezza è verde solo se ogni strumento è stato scansionato e nessuno è segnalato. Togliere un plugin funziona qualunque sia lo scope in cui è installato. Niente di questo tocca le impostazioni di un progetto. Sotto, ogni strumento e skill è raccolto per categoria: premi un nome per vedere cos'è e cosa fa.
 - **Avvia bene un repository.** Se è disponibile un connettore GitHub, una casella aggiunge al tuo primo prompt una base professionale per GitHub: scegli la licenza e le voci che vuoi (README, CI, `SECURITY.md`, Dependabot, protezione del ramo e altro), aggiungi le tue indicazioni, e resta memorizzato.
 
 <div align="center">
@@ -59,7 +59,7 @@ Le release sono costruite dal workflow di release a partire da un commit con tag
 
 ```bash
 sha256sum -c SHA256SUMS.txt
-gh attestation verify helm-0.11.0.zip --repo rlpb/helm
+gh attestation verify helm-0.12.0.zip --repo rlpb/helm
 ```
 
 ## Supporto
