@@ -54,6 +54,8 @@ export type Hit = { repo: string; description: string; stars: number }
 export type Setup = { on: boolean; license: 'Apache-2.0' | 'MIT' | 'GPL-3.0' | 'none'; items: string[]; details: string }
 
 export type Core = {
+  /** The key of an off tool that fits the prompt just typed, offered above the prompt. */
+  hint: string | null
   setup: Setup
   /** When each tool was last used by Claude, in clock milliseconds, by entry key. */
   used: Record<string, number>

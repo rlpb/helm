@@ -98,6 +98,45 @@ test('the GitHub box appears only with a GitHub connector, and its brief rides t
   expect(second.text).toBe('next')
 })
 
+const submit = ($: any, text: string) => $.prompt.submit({ text })
+const localFile = (w: any) => [...w.files].find(([k]) => k.endsWith('shop/.claude/settings.local.json'))?.[1]
+
+test('a prompt that fits an off tool raises a hint, and "This project" writes it to the folder', async ($, on) => {
+  const w = world($, on)
+  await boot($, PROJECT)
+  await (await band($)).press({ key: 'open' })
+  await submit($, 'audit the website sitemap')
+  const hint = await band($)
+  expect(await textOf(hint)).toContain('SEO is off and fits this')
+  await hint.press({ key: 'hint-project' })
+  expect(JSON.parse(localFile(w)).enabledPlugins).toEqual({ 'seo@m': true })
+})
+
+test('"This session" is undone at the next start, and "No" is remembered', async ($, on) => {
+  const w = world($, on)
+  await boot($, PROJECT)
+  await (await band($)).press({ key: 'open' })
+  await submit($, 'audit the website sitemap')
+  await (await band($)).press({ key: 'hint-session' })
+  expect(JSON.parse(localFile(w)).enabledPlugins).toEqual({ 'seo@m': true })
+  await boot($, PROJECT)
+  expect(JSON.parse(localFile(w))).toEqual({})
+  await submit($, 'audit the website sitemap')
+  await (await band($)).press({ key: 'hint-no' })
+  expect([...w.store.keys()].some(k => k.startsWith('ignored:'))).toBe(true)
+})
+
+test('refining asks one small model, keeps its numbers, and says what it used', async ($, on) => {
+  world($, on, { model: '[1]' })
+  await boot($, PROJECT)
+  const ui = await pane($)
+  await ui.input({ key: 'ask', text: 'a report with citations and a website sitemap' })
+  expect(await ui.find({ key: 'refine' })).toBeDefined()
+  await ui.press({ key: 'refine' })
+  expect(await textOf(ui)).toContain('Refined: 1 of')
+  expect(await textOf(ui)).toContain('35 tokens')
+})
+
 test('without a GitHub connector the box is not there', async ($, on) => {
   world($, on)
   await boot($, PROJECT)

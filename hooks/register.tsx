@@ -6,6 +6,7 @@ import { installPlan, judge, parseTarget } from '../src/research'
 import { tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
 import { shortlist } from '../src/shortlist'
+import { estimateTokens, hintFor, parseChoice, refinePrompt } from '../src/suggest'
 import { isProject, localSettings, projectKey, projectName } from '../src/project'
 import { applyPicks, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
@@ -16,7 +17,7 @@ import { GLOW_MS, cells, layout, svg } from '../src/graph'
 const PANE = 'helm'
 let isTerminal = false
 let fading = false
-const core = atom({ plugin: 'helm', key: 'core' } as const, { setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
+const core = atom({ plugin: 'helm', key: 'core' } as const, { hint: null, setup: DEFAULT_SETUP, used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -37,6 +38,57 @@ const disk = ($: any) => ({
 })
 
 const undoKey = (key: string) => `undo:${key}`
+const tempKey = (key: string) => `temp:${key}`
+const ignoreKey = (key: string) => `ignored:${key}`
+
+/** The way back for every key turned on here: the first value seen wins, so Undo goes to the original. */
+async function keepBefore($: any, key: string, before: Before) {
+  const old = ((await $.store.get(undoKey(key))) as Before | undefined) ?? {}
+  await $.store.set(undoKey(key), { ...before, ...old })
+}
+
+/** Turns one tool on for this folder, for good or only until the next session. */
+async function accept($: any, key: string, scope: 'project' | 'session') {
+  const c = await read($, core)
+  const entry = (c.index ?? []).find(x => x.key === key)
+  if (!c.project || !entry) return
+  const file = localSettings(c.project.root)
+  const text = (await $.fs.exists(file)) ? ((await $.fs.read(file)) as string) : ''
+  const done = applyPicks(text, [entry])
+  if (!done) return say($, 'The settings file of this folder is not valid JSON, so Helm left it alone.')
+  await $.fs.write(file, done.text)
+  await keepBefore($, c.project.key, done.before)
+  if (scope === 'session') {
+    const temp = ((await $.store.get(tempKey(c.project.key))) as string[] | undefined) ?? []
+    await $.store.set(tempKey(c.project.key), [...new Set([...temp, key])])
+  }
+  const where = scope === 'session' ? 'for this session' : 'for this project'
+  await update($, core, s => ({ ...s, hint: null, message: `${entry.name} is on ${where}. A skill applies at once; a plugin from the next chat.` }))
+}
+
+/** "No": the tool is not suggested again in this folder. */
+async function dismiss($: any, key: string) {
+  const c = await read($, core)
+  if (!c.project) return
+  const ignored = ((await $.store.get(ignoreKey(c.project.key))) as string[] | undefined) ?? []
+  await $.store.set(ignoreKey(c.project.key), [...new Set([...ignored, key])])
+  await update($, core, s => ({ ...s, hint: null }))
+}
+
+/** One small-model call over the shortlist's candidates; the price is shown before, the real use after. */
+async function refine($: any) {
+  const c = await read($, core)
+  if (!c.ask) return
+  const index = c.index ?? []
+  const candidates = shortlist(index, c.ask.text, 12).map(k => index.find(x => x.key === k)!).filter(Boolean)
+  if (candidates.length < 2) return
+  await say($, 'Asking a small model…')
+  const r = await $.model.complete({ model: 'haiku', prompt: refinePrompt(candidates, c.ask.text), maxTokens: 100 }).catch(() => ({ isAnswered: false }))
+  if (!r.isAnswered) return say($, 'The small model did not answer; the word match stays.')
+  const picks = parseChoice(r.text, candidates)
+  const used = (r.usage?.input_tokens ?? 0) + (r.usage?.output_tokens ?? 0)
+  await update($, core, s => ({ ...s, ask: s.ask ? { ...s.ask, picks } : s.ask, message: `Refined: ${picks.length} of ${candidates.length} kept (${used} tokens).` }))
+}
 
 /** Turns the shortlist on for this folder only, in its own settings.local.json, and keeps the way back. */
 async function turnOnHere($: any) {
@@ -48,7 +100,7 @@ async function turnOnHere($: any) {
   const done = applyPicks(text, picks)
   if (!done) return say($, 'This folder\'s settings file is not valid JSON, so Helm left it alone.')
   await $.fs.write(file, done.text)
-  await $.store.set(undoKey(c.project.key), done.before)
+  await keepBefore($, c.project.key, done.before)
   await say($, `Turned on ${Object.keys(done.before).length} for ${c.project.name}. It applies from the next chat here.`)
 }
 
@@ -200,6 +252,17 @@ export const register: Register = on => {
 
     const project = isProject(cwd, configDir, home) ? { root: cwd, name: projectName(cwd), key: projectKey(cwd) } : null
     const saved = project ? ((await $.store.get(stateKey(project.key))) as ProjectState | undefined) : undefined
+    // Tools turned on "for this session" last time go back first, so the index below is read as they now stand.
+    if (project) {
+      const temp = ((await $.store.get(tempKey(project.key))) as string[] | undefined) ?? []
+      const before = ((await $.store.get(undoKey(project.key))) as Before | undefined) ?? {}
+      const file = localSettings(project.root)
+      if (temp.length > 0 && (await $.fs.exists(file))) {
+        const back = undoPicks((await $.fs.read(file)) as string, Object.fromEntries(temp.filter(k => k in before).map(k => [k, before[k]])))
+        if (back !== null) await $.fs.write(file, back)
+        await $.store.delete(tempKey(project.key))
+      }
+    }
     const settings = ((await $.settings.read().catch(() => ({}))) ?? {}) as Record<string, unknown>
     const index = await loadIndex(
       { read: async p => (await $.fs.read(p)) as string, list: p => $.fs.list(p), exists: p => $.fs.exists(p) },
@@ -209,7 +272,7 @@ export const register: Register = on => {
 
     const setup = { ...DEFAULT_SETUP, ...(((await $.store.get('github-setup')) as object | undefined) ?? {}) }
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
-    await update($, core, () => ({ used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    await update($, core, () => ({ hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
     return started
   })
 
@@ -239,6 +302,11 @@ export const register: Register = on => {
   // The GitHub brief rides on the first prompt of a project, once.
   on('prompt.submit', async ($, e, next) => {
     const c = await read($, core)
+    if (c.project && c.state !== 'declined') {
+      const ignored = ((await $.store.get(ignoreKey(c.project.key))) as string[] | undefined) ?? []
+      const hint = hintFor(c.index ?? [], e.text, ignored)
+      if (hint !== c.hint) await update($, core, s => ({ ...s, hint }))
+    }
     if (!c.project || !c.setup.on || !hasGithub(await $.tool.list().catch(() => []))) return next(e)
     const sentKey = `gh-sent:${c.project.key}`
     if (await $.store.get(sentKey)) return next(e)
@@ -255,8 +323,22 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const c = await read($, core)
-    if (e.props.hasSurvey || !c.project || c.state !== 'new') return next(e)
+    if (e.props.hasSurvey || !c.project) return next(e)
     const { Box, Button, Text } = $.ui.resolve(e)
+    const hinted = c.hint ? (c.index ?? []).find(x => x.key === c.hint) : undefined
+    if (hinted && c.state !== 'new') {
+      return (
+        <Box>
+          <Text dimColor>{`${hinted.name} is off and fits this. Turn it on `}</Text>
+          <Button key="hint-session" label="This session" onPress={() => accept($, hinted.key, 'session')} />
+          <Text> </Text>
+          <Button key="hint-project" label="This project" onPress={() => accept($, hinted.key, 'project')} />
+          <Text> </Text>
+          <Button key="hint-no" label="No" onPress={() => dismiss($, hinted.key)} />
+        </Box>
+      )
+    }
+    if (c.state !== 'new') return next(e)
     return (
       <Box>
         <Text dimColor>New project: {c.project.name}. Set it up with Helm? </Text>
@@ -368,6 +450,13 @@ export const register: Register = on => {
                 </Text>
               ) : null
             })}
+            {shortlist(c.index ?? [], c.ask.text, 12).length > 1 && (
+              <Button
+                key="refine"
+                label={`Refine with a small model (about ${estimateTokens(refinePrompt((c.index ?? []).filter(x => shortlist(c.index ?? [], c.ask!.text, 12).includes(x.key)), c.ask.text))} tokens)`}
+                onPress={() => refine($)}
+              />
+            )}
             {c.ask.picks.some(k => (c.index ?? []).some(x => x.key === k && !x.on)) && (
               <Box>
                 <Button key="here" label="Turn on for this project" onPress={() => turnOnHere($)} />

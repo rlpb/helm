@@ -9,6 +9,8 @@ export const PROJECT = `${HOME}/work/shop`
 type Options = {
   files?: [string, string][]
   settings?: object
+  /** What the small model answers; absent, it does not answer. */
+  model?: string
   tools?: { name: string; mcp: boolean }[]
   store?: Record<string, unknown>
   run?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }
@@ -39,6 +41,7 @@ export function world($: any, on: any, options: Options = {}) {
     store.delete(e.key)
     return { value: undefined }
   })
+  on('model.complete', () => ({ value: options.model ? { isAnswered: true, text: options.model, usage: { input_tokens: 30, output_tokens: 5 } } : { isAnswered: false, reason: 'none' } }))
   on('ui.open', () => ({ value: undefined }))
   on('prompt.submit', (_$: any, e: any) => ({ text: e.text }))
   mock.clock(on, { now: Date.UTC(2026, 9, 6, 12, 0, 0) })

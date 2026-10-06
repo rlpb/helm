@@ -6,9 +6,14 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-06
+
 ### Changed
 
-- The README banner is now an illustration made with FLUX.2 Flex instead of a hand-drawn SVG.
+- A new look: a banner made from generated art with real type set over it, one card per feature around the real panel, an animated demo, and a Map that loops (`scripts/brand.mjs`, `scripts/gif.py`, `scripts/map.mjs`).
+- A hint above the prompt when an off tool fits what you just typed: turn it on for this session, for this project, or say No (remembered per folder).
+- "Refine with a small model": one call over the shortlist, with its size shown before and the real use after.
+- No personal example data in the screenshots, tests or placeholders.
 
 ## [0.1.1] - 2026-10-06
 
@@ -45,6 +50,7 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rlpb/helm/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/rlpb/helm/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/rlpb/helm/releases/tag/v0.1.0

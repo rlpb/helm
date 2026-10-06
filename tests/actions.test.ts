@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { applyPicks, undoPicks } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
 import { brief, hasGithub, nextLicense } from '../src/github'
+import { estimateTokens, hintFor, parseChoice, refinePrompt } from '../src/suggest'
 import type { Entry } from '../types'
 
 const entry = (key: string, on: boolean): Entry => ({ key, kind: key.startsWith('plugin:') ? 'plugin' : 'skill', name: key, description: '', category: 'other', on })
@@ -65,5 +66,26 @@ describe('the GitHub brief', () => {
     expect(hasGithub([{ name: 'mcp__github__create_issue', mcp: true }])).toBe(true)
     expect(hasGithub([{ name: 'github_helper', mcp: false }])).toBe(false)
     expect(nextLicense('none')).toBe('Apache-2.0')
+  })
+})
+
+describe('suggestions while working', () => {
+  const idx = (over: Partial<Entry>[]): Entry[] => over.map((o, i) => ({ key: `skill:s${i}`, kind: 'skill', name: `s${i}`, description: '', category: 'other', on: false, ...o }))
+
+  test('only an off tool with a strong match is offered, and an ignored one never is', () => {
+    const index = idx([{ name: 'Seo audit', description: 'Audit a website sitemap' }, { name: 'Notes', description: 'Keep notes', on: true }])
+    expect(hintFor(index, 'please audit the website sitemap', [])).toBe('skill:s0')
+    expect(hintFor(index, 'please audit the website sitemap', ['skill:s0'])).toBeNull()
+    expect(hintFor(index, 'rename a variable', [])).toBeNull()
+    expect(hintFor(index, 'keep notes', [])).toBeNull()
+  })
+
+  test('the model reply is read as numbers in range, and nothing else', () => {
+    const c = idx([{}, {}, {}])
+    expect(parseChoice('Sure: [1, 3]', c)).toEqual(['skill:s0', 'skill:s2'])
+    expect(parseChoice('[0, 9, 2, 2]', c)).toEqual(['skill:s1'])
+    expect(parseChoice('none', c)).toEqual([])
+    expect(estimateTokens('x'.repeat(40))).toBe(10)
+    expect(refinePrompt(c, 'a report')).toContain('3. s2')
   })
 })
