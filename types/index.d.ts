@@ -1,7 +1,7 @@
 // Type contract of Helm's session state. Every value is plain JSON so that the host can hold it
 // across hot reloads. See hooks/register.tsx.
 
-export type Tab = 'project' | 'global'
+export type Tab = 'project' | 'global' | 'graph'
 
 /** What kind of thing an installed entry is. */
 export type Kind = 'plugin' | 'skill'
@@ -51,6 +51,10 @@ export type Found = { meta: Meta; verdict: Verdict }
 export type Hit = { repo: string; description: string; stars: number }
 
 export type Core = {
+  /** When each tool was last used by Claude, in clock milliseconds, by entry key. */
+  used: Record<string, number>
+  /** Bumped while a glow fades, so a terminal redraws. */
+  tick: number
   found: Found | null
   hits: Hit[] | null
   /** Repos installed for one project, offered later as global installs. */

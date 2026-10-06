@@ -10,9 +10,12 @@ import { isProject, localSettings, projectKey, projectName } from '../src/projec
 import { applyPicks, undoPicks } from '../src/apply'
 import type { Before } from '../src/apply'
 import { checkup, updateAll } from '../src/tidy'
+import { GLOW_MS, cells, layout, svg } from '../src/graph'
 
 const PANE = 'helm'
-const core = atom({ plugin: 'helm', key: 'core' } as const, { found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
+let isTerminal = false
+let fading = false
+const core = atom({ plugin: 'helm', key: 'core' } as const, { used: {}, tick: 0, found: null, hits: null, candidates: [], dir: '', message: null, report: null, confirm: null, index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -193,7 +196,30 @@ export const register: Register = on => {
     ).catch(() => [])
 
     const candidates = ((await $.store.get('candidates')) as string[] | undefined) ?? []
-    await update($, core, () => ({ found: null, hits: null, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    await update($, core, () => ({ used: {}, tick: 0, found: null, hits: null, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    return next(e)
+  })
+
+  // A Skill call lights its dot. A terminal has no animation of its own, so it redraws while the glow fades.
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    const name = String((e as any).skill ?? '')
+    const c = await read($, core)
+    const list = c.index ?? []
+    const entry = list.find(x => x.key === `skill:${name}`) ?? list.find(x => x.kind === 'plugin' && x.key.startsWith(`plugin:${name.split(':')[0]}@`))
+    if (entry) {
+      const at = await $.clock.now()
+      await update($, core, s => ({ ...s, used: { ...s.used, [entry.key]: at } }))
+      if (isTerminal && !fading) {
+        fading = true
+        void (async () => {
+          while ((await $.clock.now()) - at < GLOW_MS + 500) {
+            await $.clock.sleep(500)
+            await update($, core, s => ({ ...s, tick: s.tick + 1 }))
+          }
+          fading = false
+        })()
+      }
+    }
     return next(e)
   })
 
@@ -224,18 +250,41 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Input, Text } = $.ui.resolve(e)
+    const { Box, Button, Input, Raster, Svg, Text } = $.ui.resolve(e as any) as any
     const c = await read($, core)
     const n = await read($, nav)
     const rows = tally(c.index ?? [])
     const active = (c.index ?? []).filter(x => x.on).length
+    const tabs = (
+      <Box>
+        <Button key="project" label={n.tab === 'project' ? '[Project]' : 'Project'} onPress={() => update($, nav, () => ({ tab: 'project' }))} />
+        <Text> </Text>
+        <Button key="global" label={n.tab === 'global' ? '[Global]' : 'Global'} onPress={() => update($, nav, () => ({ tab: 'global' }))} />
+        <Text> </Text>
+        <Button key="graph" label={n.tab === 'graph' ? '[Map]' : 'Map'} onPress={() => update($, nav, () => ({ tab: 'graph' }))} />
+      </Box>
+    )
+    if (n.tab === 'graph') {
+      const now = await $.clock.now()
+      const lay = layout(c.index ?? [])
+      const columns = Math.max(40, Math.min(e.props.bodyColumns ?? 80, 100))
+      const lines = 16
+      isTerminal = e.surface === 'terminal'
+      return (
+        <Box flexDirection="column">
+          {tabs}
+          {e.surface === 'terminal' ? (
+            <Raster key="map" columns={columns} rows={lines} cells={cells(lay, c.used, now, columns, lines)} />
+          ) : (
+            <Svg source={svg(lay, c.used, now)} alt="Map of installed tools, lit when used" />
+          )}
+          <Text dimColor>Lit dots are tools Claude just used.</Text>
+        </Box>
+      )
+    }
     return (
       <Box flexDirection="column">
-        <Box>
-          <Button key="project" label={n.tab === 'project' ? '[Project]' : 'Project'} onPress={() => update($, nav, () => ({ tab: 'project' }))} />
-          <Text> </Text>
-          <Button key="global" label={n.tab === 'global' ? '[Global]' : 'Global'} onPress={() => update($, nav, () => ({ tab: 'global' }))} />
-        </Box>
+        {tabs}
         <Text bold>{n.tab === 'project' ? (c.project ? c.project.name : 'No project here') : 'Everything installed'}</Text>
         {c.index === null && <Text dimColor>Reading what is installed…</Text>}
         {c.index !== null && (
