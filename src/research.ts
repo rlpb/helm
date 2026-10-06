@@ -24,7 +24,7 @@ export function judge(m: Meta, now: number): Verdict {
   const no: Reason[] = []
   const caution: Reason[] = []
   if (m.archived) no.push({ k: 'archived' })
-  if (!m.marketplace && !m.isSkill) no.push({ k: 'noform' })
+  if (!m.marketplace && !m.isSkill && !m.wrap) no.push({ k: 'noform' })
   if (!m.license || m.license === 'NOASSERTION') caution.push({ k: 'nolicense' })
   const idle = (now - Date.parse(m.pushedAt)) / 86_400_000
   if (Number.isFinite(idle) && idle > 365) caution.push({ k: 'idle', n: Math.round(idle / 30) })
@@ -33,14 +33,31 @@ export function judge(m: Meta, now: number): Verdict {
 }
 const SAFE = /^[A-Za-z0-9._-]+$/
 
+const SAFE_PATH = /^[A-Za-z0-9._/-]+$/
+
+/** A repository with skills in subfolders, or a plugin and no catalog, installs through a one-plugin catalog that Helm writes beside the Claude config. */
+export function wrapperFile(m: Meta, marketsDir: string): { dir: string; path: string; text: string; market: string; plugin: string } | null {
+  const [owner, name] = m.repo.split('/')
+  if (!m.wrap || !marketsDir || !SAFE.test(owner) || !SAFE.test(name)) return null
+  const skills = m.wrap.skills.filter(p => SAFE_PATH.test(p) && !p.includes('..'))
+  if (!m.wrap.plugin && skills.length === 0) return null
+  const market = `helm-${name}`
+  const dir = `${marketsDir}/${owner}-${name}`
+  const entry = { name, description: m.description.slice(0, 200), source: { source: 'url', url: `https://github.com/${m.repo}.git` }, ...(m.wrap.plugin ? {} : { strict: false, skills: skills.map(p => `./${p}`) }) }
+  const text = JSON.stringify({ name: market, owner: { name: 'Helm' }, plugins: [entry] }, null, 2)
+  return { dir, path: `${dir}/.claude-plugin/marketplace.json`, text, market, plugin: name }
+}
+
 /** The commands that install it, or `null` when the form is not one Helm knows. */
-export function installPlan(m: Meta, scope: 'user' | 'local', skillsDir: string): string[][] | null {
+export function installPlan(m: Meta, scope: 'user' | 'local', skillsDir: string, marketsDir = ''): string[][] | null {
   if (m.marketplace && SAFE.test(m.marketplace.name) && m.marketplace.plugins.length > 0 && m.marketplace.plugins.every(p => SAFE.test(p))) {
     return [
       ['claude', 'plugin', 'marketplace', 'add', m.repo],
       ...m.marketplace.plugins.map(p => ['claude', 'plugin', 'install', `${p}@${m.marketplace!.name}`, '--scope', scope]),
     ]
   }
+  const wrap = wrapperFile(m, marketsDir)
+  if (wrap) return [['claude', 'plugin', 'marketplace', 'add', wrap.dir], ['claude', 'plugin', 'install', `${wrap.plugin}@${wrap.market}`, '--scope', scope]]
   if (m.isSkill) {
     const name = m.repo.split('/')[1]
     return SAFE.test(name) ? [['git', 'clone', '--depth', '1', `https://github.com/${m.repo}.git`, `${skillsDir}/${name}`]] : null

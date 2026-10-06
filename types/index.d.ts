@@ -48,6 +48,8 @@ export type Meta = {
   marketplace: { name: string; plugins: string[] } | null
   /** The repo is one skill (SKILL.md at its root). */
   isSkill: boolean
+  /** Skills in subfolders, or a plugin with no catalog: Helm wraps the repository in a catalog of its own to install it. */
+  wrap?: { plugin: boolean; skills: string[] } | null
 }
 
 /** Why a tool got its verdict: a code the panel turns into a sentence, and a number when one is needed. */

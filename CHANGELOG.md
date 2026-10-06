@@ -6,6 +6,21 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-10-06
+
+### Added
+
+- **Repositories with skills in subfolders, or a plugin without a catalog, can now be installed.** Helm reads the repository tree, writes a one-plugin catalog beside the Claude config and installs through it with the normal `claude plugin` commands, so the skills load like any other plugin. Checked against a real collection: the plugin installed and listed all its skills.
+
+### Changed
+
+- **The caret in the text area blinks**, so it is clear where typing goes.
+- **A copy switched off beside an active twin of the same name is listed once**, in the counts and in the tool list.
+
+### Removed
+
+- **The Security dot and button above the prompt.** The scan result lives in the Status section of the Global tab, where it can be acted on.
+
 ## [0.12.1] - 2026-10-06
 
 ### Added
@@ -253,7 +268,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.12.2...HEAD
+[0.12.2]: https://github.com/rlpb/helm/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/rlpb/helm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rlpb/helm/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/rlpb/helm/compare/v0.10.1...v0.11.0

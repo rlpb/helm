@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { review, similar } from '../src/health'
+import { review, similar, visible } from '../src/health'
 import { readUpdate } from '../src/tidy'
 import type { Entry } from '../types'
 import { boot, PROJECT, world } from './world'
 
 const PANE_PROPS = { title: 'Helm', isFocused: true, bodyColumns: 80, placement: 'inline', scroll: {}, view: {} } as any
-const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: {}, view: {} } as any
 const textOf = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text).join('\n')
 
 const e = (key: string, name: string, description: string, kind: 'skill' | 'plugin' = 'skill', on = true): Entry => ({ key, kind, name, description, category: 'build', on })
@@ -47,7 +46,7 @@ describe('judging the setup, not only its files', () => {
 })
 
 describe('the panel does not round up', () => {
-  test('a fresh setup is "learning", not "all good", and the dot is amber until everything is scanned', async ($, on) => {
+  test('a fresh setup is "learning", not "all good"', async ($, on) => {
     world($, on, { store: { scans: { 'plugin:tdd@m': SAFE } } })
     await boot($, PROJECT)
     const ui = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
@@ -55,14 +54,9 @@ describe('the panel does not round up', () => {
     const text = await textOf(ui)
     expect(text).toContain('Learning how you work')
     expect(text).toContain('not scanned yet')
-    const first = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-    await first.press({ key: 'open' })
-    const band = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND_PROPS, bodyColumns: 101 } })
-    const dots = (await band.findAll({ type: 'Text' })).filter((t: any) => t.text === '●')
-    expect(dots.some((d: any) => d.props.color === 'warning')).toBe(true)
   })
 
-  test('scanning everything turns the dot green, and the security tile says all were scanned', async ($, on) => {
+  test('scanning everything makes the security tile say all were scanned', async ($, on) => {
     world($, on)
     await boot($, PROJECT)
     const ui = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
@@ -70,10 +64,14 @@ describe('the panel does not round up', () => {
     await ui.press({ key: 'scan' })
     await new Promise(r => setTimeout(r, 100))
     expect(await textOf(ui)).toContain('scanned, nothing flagged')
-    const first = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-    await first.press({ key: 'open' })
-    const band = await $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: { ...BAND_PROPS, bodyColumns: 101 } })
-    const dots = (await band.findAll({ type: 'Text' })).filter((t: any) => t.text === '●')
-    expect(dots.some((d: any) => d.props.color === 'success')).toBe(true)
+  })
+})
+
+describe('what the lists show', () => {
+  test('a copy switched off beside an active twin of the same name is listed once', () => {
+    const a = e('skill:ponytail', 'Ponytail', 'x')
+    const b = e('plugin:ponytail@p', 'ponytail', 'x', 'plugin', false)
+    const c = e('skill:solo', 'Solo', 'x', 'skill', false)
+    expect(visible([a, b, c]).map(x => x.key)).toEqual(['skill:ponytail', 'skill:solo'])
   })
 })

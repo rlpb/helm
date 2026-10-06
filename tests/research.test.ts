@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { installPlan, judge, parseTarget } from '../src/research'
+import { installPlan, judge, parseTarget, wrapperFile } from '../src/research'
 import type { Meta } from '../src/research'
 
 const NOW = Date.parse('2026-10-06T00:00:00Z')
@@ -48,5 +48,21 @@ describe('the install plan', () => {
   test('a single skill is cloned, and odd names are refused', () => {
     expect(installPlan(meta({ marketplace: null, isSkill: true }), 'user', '/c/skills')).toEqual([['git', 'clone', '--depth', '1', 'https://github.com/demo/tool.git', '/c/skills/tool']])
     expect(installPlan(meta({ marketplace: { name: 'x;y', plugins: ['a'] } }), 'user', '/c/skills')).toBeNull()
+  })
+})
+
+describe('a repository Helm wraps in a catalog of its own', () => {
+  test('skills in subfolders become a one-plugin catalog, a bare plugin keeps its manifest', () => {
+    const skills = meta({ marketplace: null, isSkill: false, wrap: { plugin: false, skills: ['skills/a', 'skills/b', '../evil'] } })
+    expect(judge(skills, Date.parse('2026-10-01')).level).not.toBe('no')
+    const file = wrapperFile(skills, '/c/helm-markets')!
+    expect(JSON.parse(file.text).plugins[0]).toMatchObject({ name: 'tool', strict: false, skills: ['./skills/a', './skills/b'] })
+    expect(installPlan(skills, 'user', '/c/skills', '/c/helm-markets')).toEqual([
+      ['claude', 'plugin', 'marketplace', 'add', '/c/helm-markets/demo-tool'],
+      ['claude', 'plugin', 'install', 'tool@helm-tool', '--scope', 'user'],
+    ])
+    const plugin = wrapperFile(meta({ marketplace: null, isSkill: false, wrap: { plugin: true, skills: [] } }), '/c/helm-markets')!
+    expect(JSON.parse(plugin.text).plugins[0].strict).toBeUndefined()
+    expect(wrapperFile(meta({ marketplace: null, isSkill: false, wrap: { plugin: false, skills: [] } }), '/c/helm-markets')).toBeNull()
   })
 })

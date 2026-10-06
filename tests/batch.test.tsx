@@ -10,12 +10,17 @@ const run = (argv: string[]) => {
   if (argv[0] !== 'gh') return { exitCode: 0, stdout: '', stderr: '' }
   const call = argv.join(' ')
   if (call.includes('search repos')) return { exitCode: 0, stdout: JSON.stringify([{ fullName: 'demo/caveman', stargazersCount: 900 }]), stderr: '' }
+  const tree = call.match(/repos\/([^/\s]+\/[^/\s]+)\/git\/trees/)
+  if (tree) {
+    const paths = tree[1] === 'demo/coll' ? ['README.md', 'skills/one/SKILL.md', 'skills/two/SKILL.md', 'tests/x/SKILL.md'] : ['README.md']
+    return { exitCode: 0, stdout: JSON.stringify({ tree: paths.map(path => ({ path, type: 'blob' })) }), stderr: '' }
+  }
   const m = call.match(/repos\/([^/\s]+\/[^/\s]+)(?:\/contents\/(.+))?$/)
   if (!m) return { exitCode: 1, stdout: '', stderr: '' }
   const [, full, file] = m
   if (full === 'demo/gone') return { exitCode: 1, stdout: '', stderr: '404' }
   if (!file) return { exitCode: 0, stdout: JSON.stringify(repo(full)), stderr: '' }
-  if (full === 'demo/bare') return { exitCode: 1, stdout: '', stderr: '' }
+  if (full === 'demo/bare' || full === 'demo/coll') return { exitCode: 1, stdout: '', stderr: '' }
   if (file.endsWith('marketplace.json')) return { exitCode: 0, stdout: JSON.stringify({ name: 'mk', plugins: [{ name: full.split('/')[1] }] }), stderr: '' }
   return { exitCode: 1, stdout: '', stderr: '' }
 }
@@ -79,4 +84,23 @@ test('what is already installed is not looked up again, and a repository that is
   expect(text).toContain('Already installed')
   expect(w.ran.some(a => a.join(' ').includes('repos/demo/tdd'))).toBe(false)
   expect(text).toContain('No plugin catalog or SKILL.md')
+})
+
+test('a repository with skills in subfolders is installed through a catalog Helm writes', async ($, on) => {
+  const w = world($, on, { run })
+  await boot($, PROJECT)
+  const ui = await $.ui.mount({ plugin: 'helm', surface: 'desktop', component: 'Pane', props: PANE_PROPS, requestId: 'helm' })
+  await ui.post({ text: 'demo/coll\ndemo/alpha' }, { in: 'research-editor' })
+  await ui.press({ key: 'research-go' })
+  await new Promise(r => setTimeout(r, 200))
+  await ui.press({ key: 'b-install' })
+  await new Promise(r => setTimeout(r, 200))
+  const cmds = w.ran.filter(a => a[0] === 'claude' && a[1] === 'plugin').map(a => a.slice(2, 5).join(' '))
+  expect(cmds.some(c => c.startsWith('marketplace add') && c.includes('demo-coll'))).toBe(true)
+  expect(cmds).toContain('install coll@helm-coll --scope')
+  const file = [...w.files.entries()].find(([path]) => path.endsWith('demo-coll/.claude-plugin/marketplace.json'))
+  expect(file).toBeDefined()
+  const plugin = JSON.parse(String(file![1])).plugins[0]
+  expect(plugin.skills).toEqual(['./skills/one', './skills/two'])
+  expect(plugin.strict).toBe(false)
 })

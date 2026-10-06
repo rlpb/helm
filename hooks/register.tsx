@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { BatchRow, Core, Found, Hit, Meta, Nav, ProjectState, ScanResult, Setup } from '../types'
-import { installPlan, installedAs, judge, parseItems } from '../src/research'
+import { installPlan, installedAs, judge, parseItems, wrapperFile } from '../src/research'
 import type { Item } from '../src/research'
 import { loadIndex, scanTargets } from '../src/load'
 import { shortlist } from '../src/shortlist'
@@ -400,6 +400,23 @@ async function inspect($: any, repo: string, quiet = false): Promise<Found | nul
     }
   }
   const skill = marketplace ? { exitCode: 1 } : await gh($, ['api', ...RAW, `repos/${repo}/contents/SKILL.md`])
+  // Neither a catalog nor one skill at the top: look at the whole tree for skills in subfolders or a plugin manifest.
+  let wrap: Meta['wrap'] = null
+  if (!marketplace && skill.exitCode !== 0) {
+    const tree = await gh($, ['api', `repos/${repo}/git/trees/HEAD?recursive=1`])
+    try {
+      const paths: string[] = JSON.parse(tree.stdout).tree.filter((x: any) => x.type === 'blob').map((x: any) => String(x.path))
+      const plugin = paths.includes('.claude-plugin/plugin.json')
+      const skills = paths
+        .filter(x => /(^|\/)SKILL\.md$/.test(x) && !/(^|\/)(node_modules|tests?|examples?|docs?|templates?|fixtures?|\.github)\//i.test(x))
+        .map(x => x.replace(/\/?SKILL\.md$/, ''))
+        .filter(x => x !== '' && x.split('/').length <= 4)
+        .slice(0, 60)
+      if (plugin || skills.length > 0) wrap = { plugin, skills: plugin ? [] : skills }
+    } catch {
+      // No readable tree: the repository stays "nothing to install".
+    }
+  }
   const meta: Meta = {
     repo: r.full_name,
     description: String(r.description ?? ''),
@@ -409,6 +426,7 @@ async function inspect($: any, repo: string, quiet = false): Promise<Found | nul
     stars: Number(r.stargazers_count ?? 0),
     marketplace,
     isSkill: skill.exitCode === 0,
+    wrap,
   }
   let verdict = judge(meta, await $.clock.now())
   const scanner = (await read($, core)).scanner.state
@@ -514,6 +532,12 @@ async function runBatch($: any, items: Item[]) {
   await update($, core, s => ({ ...s, busy: false, message: t(c.lang, 'msg.batchChecked', after.length, ready) }))
 }
 
+/** The one-plugin catalog a wrapped repository installs through. */
+async function writeWrapper($: any, meta: Meta, dir: string) {
+  const w = wrapperFile(meta, `${dir}/helm-markets`)
+  if (w) await $.fs.write(w.path, w.text)
+}
+
 /** Installs the ticked rows, one after the other, after the person's yes. A failure stops that row only. */
 async function installBatch($: any, scope: 'user' | 'local') {
   const c = await read($, core)
@@ -533,7 +557,8 @@ async function installBatch($: any, scope: 'user' | 'local') {
     await update($, core, s => ({ ...s, busy: true, message: t(c.lang, 'msg.batchLooking', n, chosen.length) }))
     await setRow($, i, { state: 'check' })
     const meta = row.found!.meta
-    const plan = installPlan(meta, scope, `${c.dir}/skills`)
+    const plan = installPlan(meta, scope, `${c.dir}/skills`, `${c.dir}/helm-markets`)
+    await writeWrapper($, meta, c.dir)
     if (!plan) {
       await setRow($, i, { state: 'failed', why: t(c.lang, 'msg.unknownForm') })
       continue
@@ -562,8 +587,9 @@ async function installBatch($: any, scope: 'user' | 'local') {
 async function install($: any, scope: 'user' | 'local', force = false) {
   const c = await read($, core)
   if (!c.found || (c.found.verdict.level === 'no' && !force)) return
-  const plan = installPlan(c.found.meta, scope, `${c.dir}/skills`)
+  const plan = installPlan(c.found.meta, scope, `${c.dir}/skills`, `${c.dir}/helm-markets`)
   if (!plan) return say($, 'msg.unknownForm')
+  await writeWrapper($, c.found.meta, c.dir)
   await say($, 'msg.installing')
   for (const argv of plan) {
     const r = await $.process.run(argv, { timeoutMs: 180_000, ...(scope === 'local' && c.project ? { cwd: c.project.root } : {}) }).catch(() => ({ exitCode: -1 }))
@@ -894,10 +920,6 @@ export const register: Register = on => {
       },
       look: () => void lookHere($),
       skip: () => void setState($, 'declined'),
-      security: () => {
-        void update($, nav, s => ({ ...s, tab: 'global' }))
-        void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
-      },
     }
     return Band({ ui, c, lang: c.lang, act, terminal: e.surface === 'terminal', width: e.props.bodyColumns ?? 100, litName: litEntry?.name, litCat: litEntry?.category })
   })

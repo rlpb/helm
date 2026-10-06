@@ -13,15 +13,23 @@ const NAMED = new Set(['up', 'down', 'left', 'right', 'tab', 'pageup', 'pagedown
 // The one live text lives here, not in `state`: several keys can arrive before the next draw.
 let live = ''
 let seen = 0
+// The caret blinks on the surface's own clock; typing shows it solid.
+let lit = true
 
 export default function Editor(props: Props, s: any) {
   const { Box, Text } = s.elements
   // A new instance starts from the draft the hooks module kept; "Clear" bumps `reset` and empties it.
-  if (s.state === undefined) live = props.start
-  else if (props.reset !== seen) live = ''
+  if (s.state === undefined) {
+    live = props.start
+    s.every?.(530, () => {
+      lit = !lit
+      s.setState({ text: live, reset: seen } as State)
+    })
+  } else if (props.reset !== seen) live = ''
   seen = props.reset
   const change = (next: string, submit = false) => {
     live = next.slice(0, LIMIT)
+    lit = true
     s.setState({ text: live, reset: seen } as State)
     s.post({ text: live, ...(submit ? { submit: true } : {}) })
   }
@@ -35,18 +43,19 @@ export default function Editor(props: Props, s: any) {
     if (text !== '') change(live + text)
   })
 
+  const caret = lit ? '▏' : ' '
   const lines = live.split('\n')
   const hidden = Math.max(0, lines.length - SHOWN)
   const visible = lines.slice(hidden)
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="suggestion" paddingX={1}>
       {live === '' ? (
-        <Text dimColor>{`▏${props.placeholder}`}</Text>
+        <Text dimColor>{`${caret}${props.placeholder}`}</Text>
       ) : (
         <Box flexDirection="column">
           {hidden > 0 && <Text dimColor>{`… ${hidden}`}</Text>}
           {visible.map((line, i) => (
-            <Text key={`l${hidden + i}`}>{`${line === '' ? ' ' : line}${i === visible.length - 1 ? '▏' : ''}`}</Text>
+            <Text key={`l${hidden + i}`}>{`${line === '' ? ' ' : line}${i === visible.length - 1 ? caret : ''}`}</Text>
           ))}
         </Box>
       )}

@@ -156,31 +156,9 @@ describe('the scanner in the panel', () => {
   })
 })
 
-describe('the security dot and the scan cache', () => {
+describe('the scan cache', () => {
   const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 120, scroll: {}, view: {} } as any
   const band = ($: any) => $.ui.mount({ plugin: 'helm', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
-
-  test('the row has a Security button that opens Global, and shows how many are flagged after a scan', async ($, on) => {
-    world($, on, { scanner: target => (target.endsWith('report-writer') ? report('DO_NOT_INSTALL', 80, [{ severity: 'CRITICAL', pattern: 'X', file: 'SKILL.md' }]) : report('SAFE', 0)) })
-    await boot($, PROJECT)
-    await (await band($)).press({ key: 'skip' })
-    const before = await band($)
-    const labels = async (ui: any) => (await ui.findAll({ type: 'Button' })).map((b: any) => String(b.label ?? b.props?.label ?? ''))
-    expect(await labels(before)).toContain('Security')
-    const ui = await pane($)
-    await ui.press({ key: 'global' })
-    await ui.press({ key: 'scan' })
-    const after = await band($)
-    expect(await labels(after)).toContain('Security 1')
-    expect(await labels(after)).not.toContain('Security')
-  })
-
-  test('the Security button can be pressed from the resting row', async ($, on) => {
-    world($, on)
-    await boot($, PROJECT)
-    await (await band($)).press({ key: 'skip' })
-    await (await band($)).press({ key: 'helm-security' })
-  })
 
   test('a second scan skips what did not change', async ($, on) => {
     const w = world($, on)

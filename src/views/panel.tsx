@@ -9,7 +9,7 @@ import type { Key, Lang } from '../i18n'
 import { shortlist } from '../shortlist'
 import { estimateTokens, refinePrompt } from '../suggest'
 import { flagged, isOverridable, watched } from '../skillspector'
-import { LEARNING_DAYS } from '../health'
+import { LEARNING_DAYS, visible } from '../health'
 import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
@@ -77,7 +77,9 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang, edito
   const { Box, Button, Input, Select, Text } = ui
   const T = (key: Key, ...vars: (string | number)[]) => t(lang, key, ...vars)
   const index = c.index ?? []
-  const active = index.filter(x => x.on).length
+  // A copy switched off beside an active twin of the same name is not listed again.
+  const listed = visible(index)
+  const active = listed.filter(x => x.on).length
   const here = c.project !== null
   const rule = terminal ? <Text dimColor>{'─'.repeat(Math.max(10, width))}</Text> : null
 
@@ -98,7 +100,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang, edito
     <Box flexDirection="column">
       <Box justifyContent="space-between">
         <Text bold>{c.project ? c.project.name : T('head.none')}</Text>
-        <Text dimColor>{c.index === null ? T('head.reading') : T('head.counts', index.length, active)}</Text>
+        <Text dimColor>{c.index === null ? T('head.reading') : T('head.counts', listed.length, active)}</Text>
       </Box>
       <Box marginTop={1} columnGap={1}>
         {tab('project', T('tab.project'))}
@@ -547,16 +549,16 @@ export function Panel({ ui, c, n, github, act, terminal, width, now, lang, edito
       : null
 
   // Every tool and skill, folded by category; each category opens to the whole list.
-  const byCategory = tally(index)
+  const byCategory = tally(listed)
   const tools = card(
     'tools',
     <Box flexDirection="column">
       <Box justifyContent="space-between">
-        {title(`${T('g.tools')}  ·  ${index.length}`, '#5aa9ff')}
+        {title(`${T('g.tools')}  ·  ${shown.length}`, '#5aa9ff')}
         <Button key="fold-all" label={open.length > 0 ? T('g.collapseAll') : T('g.expandAll')} plain onPress={() => act.foldAll(byCategory.map(r => r.category))} />
       </Box>
       {byCategory.map(r => {
-        const items = index.filter(x => x.category === r.category)
+        const items = listed.filter(x => x.category === r.category)
         const isOpen = open.includes(r.category)
         return (
           <Box key={`cat-${r.category}`} flexDirection="column" marginTop={1}>

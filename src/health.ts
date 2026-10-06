@@ -70,3 +70,11 @@ export function review(index: Entry[], uses: Record<string, { n: number; last: n
   }
   return out
 }
+
+const flatName = (e: Entry) => e.name.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** What the lists show: a copy that is switched off while another copy of the same name is on has been dealt with, so it is not listed twice. */
+export function visible(index: Entry[]): Entry[] {
+  const on = new Set(index.filter(e => e.on).map(flatName))
+  return index.filter(e => e.on || !on.has(flatName(e)))
+}
