@@ -103,7 +103,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
       {rule}
       {topLine && (
         <Box marginTop={1}>
-          <Text color={c.busy || c.scanning ? 'suggestion' : 'success'}>{`${c.busy || c.scanning ? '◌ ' : '✓ '}${topLine}`}</Text>
+          <Text color={c.failed ? 'error' : c.busy || c.scanning ? 'suggestion' : 'success'}>{`${c.failed ? '✗ ' : c.busy || c.scanning ? '◌ ' : '✓ '}${topLine}`}</Text>
         </Box>
       )}
     </Box>
@@ -418,32 +418,31 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
               <Text dimColor>{`${r.on}/${r.total}`}</Text>
             </Box>
             {isOpen && (
-              <Box flexDirection="row" flexWrap="wrap" columnGap={2} paddingLeft={3}>
-                {items.map(x => {
-                  const u = c.uses[x.key]
-                  return (
-                    <Box key={`tip-${x.key}`}>
+              <Box flexDirection="column" paddingLeft={3}>
+                <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+                  {items.map((x, i) => (
+                    <Box key={`tip-${x.key}`} hover={{ scope: `${r.category}:${i}` }}>
                       <Text color={x.on ? hex(r.category) : 'inactive'}>{`${x.on ? '●' : '○'} ${x.name}`}</Text>
-                      {/* The card that appears over the list while the pointer is on the name. */}
-                      {(() => {
-                        const cw = Math.min(52, Math.max(30, width - 10))
-                        const iw = cw - 2
-                        const fill = (text: string) => ` ${text}`.padEnd(iw, ' ').slice(0, iw)
-                        const meta = `${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`
-                        const lines = [fill(''), fill(x.name), fill(meta), fill(''), ...wrap(x.description || '—', iw - 2, 4).map(fill), fill('')]
-                        return (
-                          <Box position="absolute" top={1} left={0} display="none" hover={{ display: 'flex' }} flexDirection="column" borderStyle="round" borderColor={hex(r.category)} backgroundColor="#1c1f26" width={cw}>
-                            {lines.map((line, i) => (
-                              <Text key={`tl-${i}`} bold={i === 1} color={i === 2 ? '#9aa3b2' : '#e6e9ef'} backgroundColor="#1c1f26">
-                                {line}
-                              </Text>
-                            ))}
-                          </Box>
-                        )
-                      })()}
                     </Box>
-                  )
-                })}
+                  ))}
+                </Box>
+                {/* What the name under the pointer is: a fixed place under the list, so nothing is covered and nothing moves. */}
+                <Box key={`slot-${r.category}`} flexDirection="column" height={5} marginTop={1} overflow="hidden">
+                  {items.map((x, i) => {
+                    const u = c.uses[x.key]
+                    return (
+                      <Box key={`info-${x.key}`} display="none" hover={{ scope: `${r.category}:${i}`, display: 'flex' }} flexDirection="column">
+                        <Text bold color={hex(r.category)}>
+                          {x.name}
+                        </Text>
+                        <Text dimColor>{`${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`}</Text>
+                        {wrap(x.description || '—', Math.max(30, width - 12), 3).map((line, j) => (
+                          <Text key={`d-${j}`}>{line}</Text>
+                        ))}
+                      </Box>
+                    )
+                  })}
+                </Box>
               </Box>
             )}
           </Box>

@@ -6,6 +6,19 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-10-06
+
+### Fixed
+
+- **Removing a plugin works whatever its scope.** The command only removes a plugin from the scope it was installed in, and the default scope failed for plugins listed under another one ("Could not fix"). Helm now tries every scope, and if none works it takes the entry out of the plugin registry itself, keeping a copy next to it (`installed_plugins.json.helm-backup`). A failure is shown in red with the reason, not as a green check.
+- **No white bars around the Map.** The frame behind the picture is white; the picture now paints the whole canvas itself, so a frame of any shape shows only the map.
+- **The info on a tool no longer covers the list.** Hovering a name in Tools and skills shows its card in a fixed place under that category's list: nothing is overlaid, so nothing can show through.
+- **Zooming the Map is clean.** A zoomed category shows bigger dots with their hover cards, without a wall of overlapping names.
+
+### Known limit
+
+- The mouse wheel cannot zoom the Map: the engine gives a mod no wheel or drag events, and the picture runs no script. Zoom is by category chips.
+
 ## [0.9.1] - 2026-10-06
 
 ### Fixed
@@ -162,7 +175,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/rlpb/helm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/rlpb/helm/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rlpb/helm/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rlpb/helm/compare/v0.8.0...v0.8.1

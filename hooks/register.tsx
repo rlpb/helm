@@ -49,6 +49,7 @@ const core = atom(
     state: null,
     chat: false,
     busy: false,
+    failed: false,
     ask: null,
   } as Core,
 )
@@ -62,13 +63,20 @@ const ignoreKey = (key: string) => `ignored:${key}`
 /** A line in the panel's footer, in the language shown. */
 async function say($: any, key: Key, ...vars: (string | number)[]) {
   const c = await read($, core)
-  await update($, core, s => ({ ...s, busy: false, message: t(c.lang, key, ...vars) }))
+  await update($, core, s => ({ ...s, busy: false, failed: false, message: t(c.lang, key, ...vars) }))
+}
+
+/** The same, for something that did not work: shown in red, with the reason when there is one. */
+async function fail($: any, key: Key, why: string, ...vars: (string | number)[]) {
+  const c = await read($, core)
+  const reason = why.trim().split('\n')[0].slice(0, 160)
+  await update($, core, s => ({ ...s, busy: false, failed: true, message: `${t(c.lang, key, ...vars)}${reason ? ` ${reason}` : ''}` }))
 }
 
 /** A line that says something is under way: the top of the panel shows it with a mark, until `say` or a result replaces it. */
 async function work($: any, key: Key, ...vars: (string | number)[]) {
   const c = await read($, core)
-  await update($, core, s => ({ ...s, busy: true, message: t(c.lang, key, ...vars) }))
+  await update($, core, s => ({ ...s, busy: true, failed: false, message: t(c.lang, key, ...vars) }))
 }
 
 async function setState($: any, state: ProjectState) {
@@ -242,6 +250,32 @@ async function runUpdate($: any) {
   await say($, 'msg.updated', ok, ids.length)
 }
 
+/**
+ * Takes a plugin out. The command only knows the scope a plugin was installed in, and a plugin listed
+ * under another scope fails with the default one, so each scope is tried; as a last resort the entry
+ * is removed from the registry by hand, after a copy of the file is kept next to it.
+ */
+async function removePlugin($: any, dir: string, id: string): Promise<{ ok: boolean; why: string }> {
+  let why = ''
+  for (const scope of ['user', 'project', 'local']) {
+    const r = await $.process.run(['claude', 'plugin', 'uninstall', '--scope', scope, id], { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1, stderr: '' }))
+    if (r.exitCode === 0) return { ok: true, why: '' }
+    why = String(r.stderr || r.stdout || why)
+  }
+  const file = `${dir}/plugins/installed_plugins.json`
+  try {
+    const text = (await $.fs.read(file)) as string
+    const registry = JSON.parse(text)
+    if (!registry.plugins || !(id in registry.plugins)) return { ok: false, why }
+    await $.fs.write(`${file}.helm-backup`, text)
+    delete registry.plugins[id]
+    await $.fs.write(file, JSON.stringify(registry, null, 2))
+    return { ok: true, why: '' }
+  } catch {
+    return { ok: false, why }
+  }
+}
+
 /** The only fix Helm runs: it needs the second press on the same issue. */
 async function fixIssue($: any, key: string) {
   const c = await read($, core)
@@ -249,8 +283,8 @@ async function fixIssue($: any, key: string) {
   if (!issue?.fix) return
   if (c.confirm !== key) return void (await update($, core, s => ({ ...s, confirm: key })))
   await work($, 'msg.removing', issue.a)
-  const r = await $.process.run(issue.fix, { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1 }))
-  if (r.exitCode !== 0) return say($, 'msg.cannotFix', issue.a)
+  const done = issue.kind === 'stale-plugin' ? await removePlugin($, c.dir, issue.a) : await $.process.run(issue.fix, { timeoutMs: 60_000 }).then((r: any) => ({ ok: r.exitCode === 0, why: String(r.stderr ?? '') })).catch(() => ({ ok: false, why: '' }))
+  if (!done.ok) return fail($, 'msg.cannotFix', done.why, issue.a)
   // The index drops the plugin too, so the map and the lists match what is installed.
   await update($, core, s => ({ ...s, index: (s.index ?? []).filter(x => x.key !== key) }))
   await runCheckup($)
@@ -456,12 +490,12 @@ async function toggleTool($: any, key: string) {
   const off = entry.on
   if (entry.kind === 'plugin') {
     const r = await $.process.run(['claude', 'plugin', off ? 'disable' : 'enable', key.slice(7)], { timeoutMs: 60_000 }).catch(() => null)
-    if (!r || r.exitCode !== 0) return say($, 'msg.cannotFix', entry.name)
+    if (!r || r.exitCode !== 0) return fail($, 'msg.cannotFix', String(r?.stderr ?? ''), entry.name)
   } else {
     const file = `${c.dir}/settings.json`
     const text = (await $.fs.exists(file)) ? ((await $.fs.read(file)) as string) : ''
     const next = setSkillOff(text, key.slice(6), off)
-    if (next === null) return say($, 'msg.badjson')
+    if (next === null) return fail($, 'msg.badjson', '')
     await $.fs.write(file, next)
   }
   await update($, core, s => ({ ...s, index: (s.index ?? []).map(x => (x.key === key ? { ...x, on: !off } : x)), message: t(c.lang, off ? 'msg.switchedOff' : 'msg.switchedOn', entry.name) }))
@@ -512,7 +546,7 @@ export const register: Register = on => {
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
     const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
-    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, ask: null }))
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, failed: false, ask: null }))
     await refreshUsage($)
     void runCheckup($).catch(() => {})
     await probeScanner($)

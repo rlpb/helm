@@ -128,17 +128,17 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
   const dots = lay.nodes.filter(n => !n.hub)
 
   const build = (descLines: number, tips = true): string => {
-    const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${W}" height="${H}">`]
+    const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${W}" height="${H}" style="background:${BG}">`]
     // Hover is plain CSS: the frame has no script. Each dot has a hit circle, and the card of dot i follows it.
     const ci = (cat: string) => Math.max(0, Object.keys(COLOR).indexOf(cat))
     const css = ['.h{cursor:pointer;fill:#000;fill-opacity:0.001}', '.t{opacity:0;pointer-events:none}', '.h:hover{stroke:#fff;stroke-opacity:0.9;stroke-width:1.5}', '.t rect{fill:#1a1f2e;stroke-opacity:0.8}', '.t text{fill:#9aa3b2;font:11px sans-serif}', '.t .a{fill:#fff;font:bold 13px sans-serif}', '.t .d{fill:#d4d9e4;font:11.5px sans-serif}']
     Object.keys(COLOR).forEach((cat, i) => css.push(`.f${i}{fill:${hex(color(cat))};fill-opacity:0.92}.s${i}{fill:none;stroke:${hex(color(cat))};stroke-opacity:0.55;stroke-width:1.4}.k${i} rect{stroke:${hex(color(cat))}}`))
     if (tips) dots.forEach((_, i) => css.push(`.h${i}:hover~.t${i}{opacity:1}`))
     out.push(`<style>${css.join('')}</style>`)
-    out.push(`<rect width="${W}" height="${H}" rx="20" fill="${BG}"/>`)
+    out.push(`<rect x="-2000" y="-2000" width="${W + 4000}" height="${H + 4000}" fill="${BG}"/>`)
     out.push(
       '<defs><radialGradient id="bg" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#1c2236"/><stop offset="1" stop-color="#0e1016" stop-opacity="0"/></radialGradient></defs>' +
-        `<rect width="${W}" height="${H}" rx="20" fill="url(#bg)"/>`,
+        `<rect width="${W}" height="${H}" fill="url(#bg)"/>`,
     )
     for (const r of [110, 210, 310]) out.push(`<circle cx="${W / 2}" cy="${H / 2}" r="${r}" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>`)
     // A slow ripple from the middle, so the picture is never still.
@@ -181,7 +181,7 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
       const x = n.x.toFixed(0)
       const y = n.y.toFixed(0)
       const lit = glow(used, n.key, now)
-      const inFocus = !!focus && n.cat === opts.zoom && (total.get(n.cat)?.n ?? 0) <= 90
+      const inFocus = false
       const named = lit > 0 || (opts.uses?.[n.key] ?? 0) > 0 || inFocus
       const r = named ? 5.5 : 4.4
       // Names face outward from the hub, so neighbours on a ring do not write over each other.

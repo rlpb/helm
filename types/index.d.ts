@@ -107,6 +107,8 @@ export type Core = {
   chat: boolean
   /** Something is under way: the top line shows it with a mark. */
   busy: boolean
+  /** The line at the top is about something that did not work. */
+  failed: boolean
   ask: Ask | null
 }
 
