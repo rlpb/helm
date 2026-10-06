@@ -11,7 +11,7 @@ export const en = {
   'head.none': 'no project here',
   'head.counts': '{0} tools · {1} on',
   'head.reading': 'reading…',
-  'band.new': 'New project: {0}. Set it up with Helm?',
+  'band.new': 'New project “{0}”. Set it up?',
   'band.open': 'Open',
   'band.skip': 'Not here',
   'band.openHelm': 'Open Helm',
@@ -143,6 +143,9 @@ export const en = {
   'msg.switchedOff': '{0} switched off.',
   'msg.switchedOn': '{0} switched on.',
   'msg.scanning': 'Scanning with SkillSpector…',
+  'band.existing': '“{0}” is already under way. Read the folder and suggest tools?',
+  'band.look': 'Read it',
+  'msg.read': 'Read the folder of {0}: {1}',
 }
 
 export type Dict = typeof en

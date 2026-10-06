@@ -5,13 +5,15 @@
 import type { Entry } from '../types'
 import { scored } from './shortlist'
 
-/** One word of the name, or three of the description: a stray word is not enough. */
+/** A score of 3: one word of the name, or three of the description. */
 export const HINT_MIN = 3
+/** Different words of the prompt that must hit: one word, however strong, is a coincidence. */
+export const HINT_WORDS = 2
 
 /** The one off tool that fits a prompt best, or null. Ignored tools never come back. */
 export function hintFor(index: Entry[], prompt: string, ignored: string[]): string | null {
   const off = new Map(index.filter(e => !e.on && !ignored.includes(e.key)).map(e => [e.key, e]))
-  const best = scored([...off.values()], prompt)[0]
+  const best = scored([...off.values()], prompt).find(r => r.words >= HINT_WORDS)
   return best && best.score >= HINT_MIN ? best.key : null
 }
 

@@ -47,6 +47,7 @@ const core = atom(
     index: null,
     project: null,
     state: null,
+    chat: false,
     ask: null,
   } as Core,
 )
@@ -68,6 +69,24 @@ async function setState($: any, state: ProjectState) {
   if (!c.project) return
   await $.store.set(stateKey(c.project.key), state)
   await update($, core, s => ({ ...s, state }))
+}
+
+/** A chat already under way: read what the folder is about and shortlist the tools that fit it, instead of asking from zero. */
+async function lookHere($: any) {
+  const c = await read($, core)
+  if (!c.project) return
+  const names = (((await $.fs.list(c.project.root).catch(() => [])) as { name: string }[]) ?? []).map(x => x.name).filter(n => !n.startsWith('.'))
+  const notes: string[] = []
+  for (const file of ['package.json', 'README.md', 'pyproject.toml', 'Cargo.toml']) {
+    if (names.includes(file)) notes.push((((await $.fs.read(`${c.project.root}/${file}`).catch(() => '')) as string) ?? '').slice(0, 600))
+  }
+  const text = [c.project.name, ...names.slice(0, 40), ...notes].join(' ')
+  const picks = shortlist(c.index ?? [], text)
+  const named = picks.map(k => (c.index ?? []).find(x => x.key === k)?.name).filter(Boolean).slice(0, 4)
+  await setState($, 'ready')
+  await update($, core, s => ({ ...s, ask: { text: [c.project!.name, ...names.slice(0, 8)].join(' '), picks }, message: t(c.lang, 'msg.read', c.project!.name, named.join(', ') || '-') }))
+  await update($, nav, s => ({ ...s, tab: 'project', sub: 'setup' }))
+  await $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
 }
 
 const disk = ($: any) => ({
@@ -111,7 +130,9 @@ async function refreshUsage($: any) {
     return found && Number.isFinite(Number(found.percentUsed)) ? Math.round(Number(found.percentUsed)) : null
   }
   const ctx = u.context?.percent ?? u.context?.breakdown?.percentage
-  await update($, core, s => ({ ...s, usage: { five: limit(/five|5/i), week: limit(/seven|week|7/i), ctx: ctx == null ? null : Math.round(Number(ctx)) } }))
+  // A session that has already cost something has a conversation in it.
+  const spoken = Number(u.cost?.usd ?? 0) > 0
+  await update($, core, s => ({ ...s, chat: s.chat || spoken, usage: { five: limit(/five|5/i), week: limit(/seven|week|7/i), ctx: ctx == null ? null : Math.round(Number(ctx)) } }))
 }
 
 // ---- turning tools on for a project ----
@@ -466,7 +487,7 @@ export const register: Register = on => {
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
     const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
-    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, ask: null }))
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, ask: null }))
     await refreshUsage($)
     await probeScanner($)
     const checked = Number((await $.store.get('scanner-checked')) ?? 0)
@@ -511,6 +532,7 @@ export const register: Register = on => {
   // A tool that fits what was just typed is offered, and the GitHub brief rides on the first prompt of a project, once.
   on('prompt.submit', async ($, e, next) => {
     const c = await read($, core)
+    if (!c.chat) await update($, core, s => ({ ...s, chat: true }))
     if (c.project && c.state !== 'declined') {
       const ignored = ((await $.store.get(ignoreKey(c.project.key))) as string[] | undefined) ?? []
       const hint = hintFor(c.index ?? [], e.text, ignored)
@@ -547,6 +569,7 @@ export const register: Register = on => {
         void setState($, 'ready')
         void $.ui.open({ id: PANE, title: 'Helm', focus: true, closeOnEscape: true })
       },
+      look: () => void lookHere($),
       skip: () => void setState($, 'declined'),
       security: () => {
         void update($, nav, s => ({ ...s, tab: 'global' }))
@@ -564,17 +587,6 @@ export const register: Register = on => {
     const terminal = e.surface === 'terminal'
     const width = Math.max(40, Math.min(e.props.bodyColumns ?? 80, 100))
     const now = await $.clock.now()
-    let map: any = null
-    if (n.tab === 'graph') {
-      const lay = layout(c.index ?? [])
-      const opts = { label: (cat: string) => t(c.lang, `cat.${cat}` as Key), uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])) }
-      isTerminal = terminal
-      map = terminal ? (
-        <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
-      ) : (
-        <ui.Svg source={svg(lay, c.used, now, opts)} alt="Map of installed tools, lit when used" isInteractive />
-      )
-    }
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
       sub: (sub: Nav['sub']) => void update($, nav, s => ({ ...s, sub })),
@@ -601,6 +613,17 @@ export const register: Register = on => {
       anyway: (scope: 'user' | 'local') => void installAnyway($, scope),
     }
     try {
+      let map: any = null
+      if (n.tab === 'graph') {
+        const lay = layout(c.index ?? [])
+        const opts = { label: (cat: string) => t(c.lang, `cat.${cat}` as Key), uses: Object.fromEntries(Object.entries(c.uses).map(([k, v]) => [k, v.n])) }
+        isTerminal = terminal
+        map = terminal ? (
+          <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
+        ) : (
+          <ui.Svg source={svg(lay, c.used, now, opts)} alt="Map of installed tools, lit when used" isInteractive />
+        )
+      }
       return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })
     } catch (err) {
       // A panel that cannot draw says why, instead of the engine's empty "nothing to show".

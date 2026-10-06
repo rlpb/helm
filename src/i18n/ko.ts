@@ -9,7 +9,7 @@ export const ko: Dict = {
   'head.none': '여기에는 프로젝트가 없습니다',
   'head.counts': '도구 {0}개 · {1}개 켜짐',
   'head.reading': '읽는 중…',
-  'band.new': '새 프로젝트: {0}. Helm으로 설정할까요?',
+  'band.new': '새 프로젝트 “{0}”. 설정할까요?',
   'band.open': '열기',
   'band.skip': '여기서는 안 함',
   'band.openHelm': 'Helm 열기',
@@ -141,4 +141,7 @@ export const ko: Dict = {
   'msg.switchedOff': '{0}을(를) 껐습니다.',
   'msg.switchedOn': '{0}을(를) 켰습니다.',
   'msg.scanning': 'SkillSpector로 검사 중…',
+  'band.existing': '“{0}”은(는) 이미 진행 중입니다. 폴더를 읽고 도구를 제안할까요?',
+  'band.look': '읽기',
+  'msg.read': '{0}의 폴더를 읽었습니다: {1}',
 }

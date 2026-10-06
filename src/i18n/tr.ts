@@ -9,7 +9,7 @@ export const tr: Dict = {
   'head.none': 'burada proje yok',
   'head.counts': '{0} araç · {1} açık',
   'head.reading': 'okunuyor…',
-  'band.new': 'Yeni proje: {0}. Helm ile hazırlansın mı?',
+  'band.new': 'Yeni proje “{0}”. Kurulsun mu?',
   'band.open': 'Aç',
   'band.skip': 'Burada değil',
   'band.openHelm': 'Helm’i aç',
@@ -141,4 +141,7 @@ export const tr: Dict = {
   'msg.switchedOff': '{0} kapatıldı.',
   'msg.switchedOn': '{0} açıldı.',
   'msg.scanning': 'SkillSpector ile taranıyor…',
+  'band.existing': '“{0}” zaten sürüyor. Klasörü okuyup araç önerelim mi?',
+  'band.look': 'Oku',
+  'msg.read': '{0} klasörü okundu: {1}',
 }

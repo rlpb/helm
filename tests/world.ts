@@ -17,6 +17,8 @@ type Options = {
   /** The scanner: `missing` is not installed; otherwise what a scan of a target returns (a SAFE report by default). */
   scanner?: 'missing' | ((target: string) => object)
   store?: Record<string, unknown>
+  /** The session already has a conversation in it. */
+  spent?: boolean
   run?: (argv: string[]) => { exitCode: number; stdout: string; stderr: string }
 }
 
@@ -47,7 +49,7 @@ export function world($: any, on: any, options: Options = {}) {
   })
   on('model.complete', () => ({ value: options.model ? { isAnswered: true, text: options.model, usage: { input_tokens: 30, output_tokens: 5 } } : { isAnswered: false, reason: 'none' } }))
   on('session.usage', () => ({
-    value: { startedAt: 0, context: { percent: 31 }, rateLimits: [{ kind: 'five_hour', percentUsed: 24 }, { kind: 'seven_day', percentUsed: 41 }], cost: { usd: 0.4 } },
+    value: { startedAt: 0, context: { percent: 31 }, rateLimits: [{ kind: 'five_hour', percentUsed: 24 }, { kind: 'seven_day', percentUsed: 41 }], cost: { usd: options.spent ? 0.4 : 0 } },
   }))
   on('ui.open', () => ({ value: undefined }))
   on('prompt.submit', (_$: any, e: any) => ({ text: e.text }))

@@ -9,7 +9,7 @@ export const hi: Dict = {
   'head.none': 'यहाँ कोई प्रोजेक्ट नहीं है',
   'head.counts': '{0} टूल · {1} चालू',
   'head.reading': 'पढ़ रहा है…',
-  'band.new': 'नया प्रोजेक्ट: {0}। इसे Helm से सेट करें?',
+  'band.new': 'नया प्रोजेक्ट “{0}”। सेट करें?',
   'band.open': 'खोलें',
   'band.skip': 'यहाँ नहीं',
   'band.openHelm': 'Helm खोलें',
@@ -141,4 +141,7 @@ export const hi: Dict = {
   'msg.switchedOff': '{0} बंद किया।',
   'msg.switchedOn': '{0} चालू किया।',
   'msg.scanning': 'SkillSpector से स्कैन हो रहा है…',
+  'band.existing': '“{0}” पहले से चल रहा है। फ़ोल्डर पढ़कर टूल सुझाएँ?',
+  'band.look': 'पढ़ें',
+  'msg.read': '{0} का फ़ोल्डर पढ़ा: {1}',
 }

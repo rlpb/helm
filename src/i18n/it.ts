@@ -9,7 +9,7 @@ export const it: Dict = {
   'head.none': 'nessun progetto qui',
   'head.counts': '{0} strumenti · {1} attivi',
   'head.reading': 'lettura…',
-  'band.new': 'Nuovo progetto: {0}. Lo preparo con Helm?',
+  'band.new': 'Nuovo progetto “{0}”. Lo imposto?',
   'band.open': 'Apri',
   'band.skip': 'Non qui',
   'band.openHelm': 'Apri Helm',
@@ -141,4 +141,7 @@ export const it: Dict = {
   'msg.switchedOff': '{0} spento.',
   'msg.switchedOn': '{0} acceso.',
   'msg.scanning': 'Scansione con SkillSpector…',
+  'band.existing': '“{0}” è già avviato. Leggo la cartella e propongo gli strumenti?',
+  'band.look': 'Leggi',
+  'msg.read': 'Letta la cartella di {0}: {1}',
 }

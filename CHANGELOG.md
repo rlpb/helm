@@ -6,6 +6,18 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-10-06
+
+### Fixed
+
+- **A wrong suggestion.** "Claude SEO is off and fits this" appeared for any prompt that said "claude", because the word is in the tool's name. Words every tool shares ("claude", "code", "plugin", "skill"...) no longer count, and a hint now needs two different words of the prompt to hit, not one.
+- **The Map no longer takes the panel down.** The inspector listed every installed tool in one picker (190 or more on a full setup); it now lists one category at a time, picked from the legend, and a failure while drawing the map is reported in the panel instead of an empty pane.
+
+### Changed
+
+- **The new-project notice says Helm once** and no longer repeats the project name: `Helm  New project "shop". Set it up?`
+- **A chat already under way is joined, not set up from zero.** When the session already has a conversation, the notice reads `"shop" is already under way. Read the folder and suggest tools?`; **Read it** looks at the folder's files and `package.json` / README, shortlists the fitting tools and opens Setup with them.
+
 ## [0.7.2] - 2026-10-06
 
 ### Fixed
@@ -110,7 +122,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/rlpb/helm/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/rlpb/helm/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/rlpb/helm/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/rlpb/helm/compare/v0.6.0...v0.7.0

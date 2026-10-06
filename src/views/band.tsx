@@ -13,6 +13,7 @@ export type BandAct = {
   accept: (key: string, scope: 'project' | 'session') => void
   dismiss: (key: string) => void
   start: () => void
+  look: () => void
   skip: () => void
   security: () => void
 }
@@ -24,13 +25,18 @@ export function Band({ ui, c, lang, act, terminal, width, litName, litCat }: Pro
   const hinted = c.hint ? (c.index ?? []).find(x => x.key === c.hint) : undefined
 
   if (c.project && c.state === 'new') {
+    // A chat already under way is joined, not set up from zero: Helm reads the folder and proposes tools.
     return (
       <Box columnGap={1}>
         <Text bold color="claude">
           Helm
         </Text>
-        <Text dimColor>{t(lang, 'band.new', c.project.name)}</Text>
-        <Button key="open" label={t(lang, 'band.open')} variant="primary" onPress={act.start} />
+        <Text dimColor>{t(lang, c.chat ? 'band.existing' : 'band.new', c.project.name)}</Text>
+        {c.chat ? (
+          <Button key="look" label={t(lang, 'band.look')} variant="primary" onPress={act.look} />
+        ) : (
+          <Button key="open" label={t(lang, 'band.open')} variant="primary" onPress={act.start} />
+        )}
         <Button key="skip" label={t(lang, 'band.skip')} onPress={act.skip} />
       </Box>
     )

@@ -9,7 +9,7 @@ export const zh: Dict = {
   'head.none': '此处没有项目',
   'head.counts': '{0} 个工具 · {1} 个已启用',
   'head.reading': '读取中…',
-  'band.new': '新项目：{0}。用 Helm 来设置吗？',
+  'band.new': '新项目“{0}”。要设置吗？',
   'band.open': '打开',
   'band.skip': '此处不用',
   'band.openHelm': '打开 Helm',
@@ -141,4 +141,7 @@ export const zh: Dict = {
   'msg.switchedOff': '已关闭 {0}。',
   'msg.switchedOn': '已开启 {0}。',
   'msg.scanning': '正在用 SkillSpector 扫描…',
+  'band.existing': '“{0}”已在进行中。读取文件夹并推荐工具吗？',
+  'band.look': '读取',
+  'msg.read': '已读取 {0} 的文件夹：{1}',
 }

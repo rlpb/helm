@@ -9,7 +9,7 @@ export const id: Dict = {
   'head.none': 'tidak ada proyek di sini',
   'head.counts': '{0} alat · {1} aktif',
   'head.reading': 'membaca…',
-  'band.new': 'Proyek baru: {0}. Siapkan dengan Helm?',
+  'band.new': 'Proyek baru “{0}”. Siapkan?',
   'band.open': 'Buka',
   'band.skip': 'Bukan di sini',
   'band.openHelm': 'Buka Helm',
@@ -141,4 +141,7 @@ export const id: Dict = {
   'msg.switchedOff': '{0} dimatikan.',
   'msg.switchedOn': '{0} dinyalakan.',
   'msg.scanning': 'Memindai dengan SkillSpector…',
+  'band.existing': '“{0}” sudah berjalan. Baca folder dan sarankan alat?',
+  'band.look': 'Baca',
+  'msg.read': 'Folder {0} dibaca: {1}',
 }

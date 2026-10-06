@@ -14,7 +14,7 @@ test('a new project gets the notice, and Open remembers the folder', async ($, o
   const w = world($, on)
   await boot($, PROJECT)
   const notice = await band($)
-  expect(await textOf(notice)).toContain('New project: shop')
+  expect(await textOf(notice)).toContain('New project “shop”. Set it up?')
   await notice.press({ key: 'open' })
   expect([...w.store.values()]).toContain('ready')
 })

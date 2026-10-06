@@ -9,7 +9,7 @@ export const ar: Dict = {
   'head.none': 'لا يوجد مشروع هنا',
   'head.counts': '{0} أدوات · {1} مفعّلة',
   'head.reading': 'جارٍ القراءة…',
-  'band.new': 'مشروع جديد: {0}. هل أُعدّه باستخدام Helm؟',
+  'band.new': 'مشروع جديد «{0}». هل أُعدّه؟',
   'band.open': 'فتح',
   'band.skip': 'ليس هنا',
   'band.openHelm': 'فتح Helm',
@@ -141,4 +141,7 @@ export const ar: Dict = {
   'msg.switchedOff': 'أُوقف {0}.',
   'msg.switchedOn': 'شُغّل {0}.',
   'msg.scanning': 'جارٍ الفحص باستخدام SkillSpector…',
+  'band.existing': '«{0}» قيد العمل بالفعل. أقرأ المجلد وأقترح أدوات؟',
+  'band.look': 'اقرأ',
+  'msg.read': 'قُرئ مجلد {0}: {1}',
 }

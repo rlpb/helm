@@ -103,6 +103,8 @@ export type Core = {
   index: Entry[] | null
   project: Project | null
   state: ProjectState | null
+  /** A conversation is already under way in this session. */
+  chat: boolean
   ask: Ask | null
 }
 

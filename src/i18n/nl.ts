@@ -9,7 +9,7 @@ export const nl: Dict = {
   'head.none': 'geen project hier',
   'head.counts': '{0} tools · {1} aan',
   'head.reading': 'lezen…',
-  'band.new': 'Nieuw project: {0}. Instellen met Helm?',
+  'band.new': 'Nieuw project “{0}”. Instellen?',
   'band.open': 'Openen',
   'band.skip': 'Niet hier',
   'band.openHelm': 'Helm openen',
@@ -141,4 +141,7 @@ export const nl: Dict = {
   'msg.switchedOff': '{0} uitgezet.',
   'msg.switchedOn': '{0} aangezet.',
   'msg.scanning': 'Scannen met SkillSpector…',
+  'band.existing': '“{0}” is al bezig. De map lezen en tools voorstellen?',
+  'band.look': 'Lezen',
+  'msg.read': 'Map van {0} gelezen: {1}',
 }

@@ -415,6 +415,10 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
     .sort((a, b) => b[1].last - a[1].last)
   const selected = index.find(x => x.key === (n.inspect ?? recent[0]?.[0])) ?? index[0]
   const sel = selected ? c.uses[selected.key] : undefined
+  // The picker lists one category at a time, never the whole index: a long list may be one the engine refuses.
+  const inspectable = selected
+    ? [selected, ...index.filter(x => x.category === selected.category && x.key !== selected.key).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 59)].sort((a, b) => a.name.localeCompare(b.name))
+    : []
   const mapTab = (
     <Box flexDirection="column">
       <Box marginTop={1}>{map}</Box>
@@ -422,9 +426,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
       {byCategory.length > 0 && (
         <Box flexDirection="row" flexWrap="wrap" columnGap={2} marginTop={1}>
           {byCategory.map(r => (
-            <Text key={r.category} color={hex(r.category)}>
-              {`● ${T(`cat.${r.category}` as Key)}`}
-            </Text>
+            <Button key={`cat-${r.category}`} label={`● ${T(`cat.${r.category}` as Key)}`} plain onPress={() => act.inspect(index.find(x => x.category === r.category)!.key)} />
           ))}
         </Box>
       )}
@@ -449,7 +451,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             <Select
               key="inspect"
               value={selected.key}
-              options={[...index].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name)).map((x: Entry) => ({ value: x.key, label: x.name }))}
+              options={inspectable.map((x: Entry) => ({ value: x.key, label: x.name }))}
               onSelect={act.inspect}
             />
             <Box marginTop={1} columnGap={1}>

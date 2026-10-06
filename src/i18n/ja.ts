@@ -9,7 +9,7 @@ export const ja: Dict = {
   'head.none': 'ここにはプロジェクトがありません',
   'head.counts': 'ツール {0} 個 · 有効 {1} 個',
   'head.reading': '読み込み中…',
-  'band.new': '新しいプロジェクト: {0}。Helm で設定しますか？',
+  'band.new': '新しいプロジェクト「{0}」。設定しますか？',
   'band.open': '開く',
   'band.skip': 'ここでは不要',
   'band.openHelm': 'Helm を開く',
@@ -141,4 +141,7 @@ export const ja: Dict = {
   'msg.switchedOff': '{0} をオフにしました。',
   'msg.switchedOn': '{0} をオンにしました。',
   'msg.scanning': 'SkillSpector でスキャン中…',
+  'band.existing': '「{0}」はすでに進行中です。フォルダーを読んでツールを提案しますか？',
+  'band.look': '読む',
+  'msg.read': '{0} のフォルダーを読みました: {1}',
 }
