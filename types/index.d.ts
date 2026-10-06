@@ -105,11 +105,13 @@ export type Core = {
   state: ProjectState | null
   /** A conversation is already under way in this session. */
   chat: boolean
+  /** Something is under way: the top line shows it with a mark. */
+  busy: boolean
   ask: Ask | null
 }
 
 /** `open` holds the category ids unfolded in Global. */
-export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null; open: string[] }
+export type Nav = { tab: Tab; sub: 'setup' | 'discover'; inspect: string | null; open: string[]; /** The category the map is zoomed on, or none for the whole map. */ zoom: string | null }
 
 declare module 'claude-code' {
   interface PluginState {

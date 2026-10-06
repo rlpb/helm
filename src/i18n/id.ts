@@ -150,4 +150,8 @@ export const id: Dict = {
   'g.status': 'Status',
   'g.unchecked': 'Belum diperiksa',
   'map.hint': 'Arahkan kursor ke titik untuk melihat apa itu. Titik menyala adalah yang baru dipakai Claude.',
+  'msg.removing': 'Menghapus {0}…',
+  'g.recheck': 'Periksa lagi',
+  'map.all': 'Seluruh peta',
+  'msg.skipped': '{0} terlalu lambat dipindai, dilewati.',
 }

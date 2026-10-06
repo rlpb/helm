@@ -150,4 +150,8 @@ export const zh: Dict = {
   'g.status': '状态',
   'g.unchecked': '尚未检查',
   'map.hint': '将鼠标移到圆点上查看说明。亮着的点是 Claude 刚用过的。',
+  'msg.removing': '正在移除 {0}…',
+  'g.recheck': '重新检查',
+  'map.all': '整张图',
+  'msg.skipped': '{0} 个扫描太慢，已跳过。',
 }

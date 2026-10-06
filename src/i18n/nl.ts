@@ -150,4 +150,8 @@ export const nl: Dict = {
   'g.status': 'Status',
   'g.unchecked': 'Nog niet gecontroleerd',
   'map.hint': 'Houd de muis boven een punt om te zien wat het is. Lichtende punten gebruikte Claude net.',
+  'msg.removing': '{0} verwijderen…',
+  'g.recheck': 'Opnieuw controleren',
+  'map.all': 'Hele kaart',
+  'msg.skipped': '{0} te traag om te scannen, overgeslagen.',
 }

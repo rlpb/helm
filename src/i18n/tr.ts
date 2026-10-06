@@ -150,4 +150,8 @@ export const tr: Dict = {
   'g.status': 'Durum',
   'g.unchecked': 'Henüz denetlenmedi',
   'map.hint': 'Ne olduğunu görmek için bir noktanın üzerine gelin. Yanan noktalar Claude’un az önce kullandıklarıdır.',
+  'msg.removing': '{0} kaldırılıyor…',
+  'g.recheck': 'Yeniden denetle',
+  'map.all': 'Tüm harita',
+  'msg.skipped': '{0} taranamayacak kadar yavaştı, atlandı.',
 }

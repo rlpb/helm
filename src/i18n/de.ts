@@ -150,4 +150,8 @@ export const de: Dict = {
   'g.status': 'Zustand',
   'g.unchecked': 'Noch nicht geprüft',
   'map.hint': 'Mit der Maus über einen Punkt fahren zeigt, was es ist. Leuchtende Punkte hat Claude gerade benutzt.',
+  'msg.removing': 'Entferne {0}…',
+  'g.recheck': 'Erneut prüfen',
+  'map.all': 'Ganze Karte',
+  'msg.skipped': '{0} zu langsam zu prüfen, übersprungen.',
 }

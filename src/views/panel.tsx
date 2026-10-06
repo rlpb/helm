@@ -2,7 +2,7 @@
 // holds `$`: every effect arrives as a plain function in `act`, built in hooks/register.tsx.
 
 import { tally } from '../catalog'
-import { COLOR } from '../graph'
+import { COLOR, wrap } from '../graph'
 import { ITEMS } from '../github'
 import { LANGS, t } from '../i18n'
 import type { Key, Lang } from '../i18n'
@@ -13,6 +13,7 @@ import type { Core, Entry, Nav } from '../../types'
 
 export type Act = {
   tab: (tab: Nav['tab']) => void
+  zoom: (cat: string | null) => void
   fold: (cat: string) => void
   foldAll: (cats: string[]) => void
   inspect: (key: string) => void
@@ -87,6 +88,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
   )
   const tab = (id: Nav['tab'], label: string) => <Button key={id} label={label} variant={n.tab === id ? 'primary' : 'secondary'} onPress={() => act.tab(id)} />
 
+  const topLine = c.scanning ? T('sec.running', c.scanning.done, c.scanning.total) : c.message
   const header = (
     <Box flexDirection="column">
       <Box justifyContent="space-between">
@@ -99,12 +101,16 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
         {tab('graph', T('tab.map'))}
       </Box>
       {rule}
+      {topLine && (
+        <Box marginTop={1}>
+          <Text color={c.busy || c.scanning ? 'suggestion' : 'success'}>{`${c.busy || c.scanning ? '◌ ' : '✓ '}${topLine}`}</Text>
+        </Box>
+      )}
     </Box>
   )
 
   const footer = (
     <Box marginTop={1} flexDirection="column">
-      {c.message && <Text color="suggestion">{c.message}</Text>}
       <Select
         key="lang"
         label={`${T('lang.label')}  `}
@@ -308,7 +314,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             ))}
             <Box flexGrow={1} />
             <Box marginTop={1}>
-              <Button key="check" label={T('g.tidy')} onPress={act.check} />
+              <Button key="check" label={T('g.recheck')} onPress={act.check} />
             </Box>
           </Box>,
         )}
@@ -331,7 +337,7 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
             {title(T('sec.title'), flaggedList.length > 0 ? '#ff7a6b' : '#6fd08c')}
             {c.scanner.state === 'missing' && <Text dimColor>{T('sec.missing')}</Text>}
             {c.scanner.state === 'ready' && <Text dimColor>{T('sec.ready', c.scanner.version ?? '')}</Text>}
-            {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done + 1, c.scanning.total)}</Text>}
+            {c.scanning && <Text color="suggestion">{T('sec.running', c.scanning.done, c.scanning.total)}</Text>}
             {!c.scanning && c.scanner.state === 'ready' && Object.keys(c.scans).length > 0 && flaggedList.length === 0 && <Text color="success" bold>{`✓ ${T('sec.clean', Object.keys(c.scans).length)}`}</Text>}
             {flaggedList.length > 0 && <Text color="error" bold>{`▲ ${T('sec.flagged', flaggedList.length)}`}</Text>}
             {flaggedList.slice(0, 4).map(([key, s]) => {
@@ -419,25 +425,22 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
                     <Box key={`tip-${x.key}`}>
                       <Text color={x.on ? hex(r.category) : 'inactive'}>{`${x.on ? '●' : '○'} ${x.name}`}</Text>
                       {/* The card that appears over the list while the pointer is on the name. */}
-                      <Box
-                        position="absolute"
-                        top={1}
-                        left={0}
-                        display="none"
-                        hover={{ display: 'flex' }}
-                        flexDirection="column"
-                        borderStyle="round"
-                        borderColor={hex(r.category)}
-                        backgroundColor="#1c1f26"
-                        paddingX={1}
-                        width={Math.min(52, Math.max(30, width - 10))}
-                      >
-                        <Text bold color="#e6e9ef">
-                          {x.name}
-                        </Text>
-                        <Text color="#9aa3b2">{`${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`}</Text>
-                        <Text color="#e6e9ef">{x.description || '—'}</Text>
-                      </Box>
+                      {(() => {
+                        const cw = Math.min(52, Math.max(30, width - 10))
+                        const iw = cw - 2
+                        const fill = (text: string) => ` ${text}`.padEnd(iw, ' ').slice(0, iw)
+                        const meta = `${T(`cat.${x.category}` as Key)} · ${x.on ? T('map.on') : T('map.off')}${u ? ` · ${T('map.uses', u.n)}` : ''}`
+                        const lines = [fill(''), fill(x.name), fill(meta), fill(''), ...wrap(x.description || '—', iw - 2, 4).map(fill), fill('')]
+                        return (
+                          <Box position="absolute" top={1} left={0} display="none" hover={{ display: 'flex' }} flexDirection="column" borderStyle="round" borderColor={hex(r.category)} backgroundColor="#1c1f26" width={cw}>
+                            {lines.map((line, i) => (
+                              <Text key={`tl-${i}`} bold={i === 1} color={i === 2 ? '#9aa3b2' : '#e6e9ef'} backgroundColor="#1c1f26">
+                                {line}
+                              </Text>
+                            ))}
+                          </Box>
+                        )
+                      })()}
                     </Box>
                   )
                 })}
@@ -462,6 +465,12 @@ export function Panel({ ui, c, n, github, act, terminal, width, map, now, lang }
   // ---- Map: only the picture; what each dot is shows on hover, inside the picture ----
   const mapTab = (
     <Box flexDirection="column">
+      <Box flexDirection="row" flexWrap="wrap" columnGap={1} marginTop={1}>
+        <Button key="zoom-all" label={T('map.all')} variant={n.zoom === null ? 'primary' : 'secondary'} onPress={() => act.zoom(null)} />
+        {byCategory.map(r => (
+          <Button key={`zoom-${r.category}`} label={`● ${T(`cat.${r.category}` as Key)}`} variant={n.zoom === r.category ? 'primary' : 'secondary'} onPress={() => act.zoom(r.category)} />
+        ))}
+      </Box>
       <Box marginTop={1}>{map}</Box>
       <Text dimColor>{T('map.hint')}</Text>
     </Box>

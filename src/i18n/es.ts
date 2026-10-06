@@ -150,4 +150,8 @@ export const es: Dict = {
   'g.status': 'Estado',
   'g.unchecked': 'Aún sin comprobar',
   'map.hint': 'Pasa el ratón por un punto para ver qué es. Los encendidos son lo que Claude acaba de usar.',
+  'msg.removing': 'Quitando {0}…',
+  'g.recheck': 'Volver a comprobar',
+  'map.all': 'Todo el mapa',
+  'msg.skipped': '{0} demasiado lentas de analizar, omitidas.',
 }

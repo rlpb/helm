@@ -48,10 +48,11 @@ const core = atom(
     project: null,
     state: null,
     chat: false,
+    busy: false,
     ask: null,
   } as Core,
 )
-const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null, open: [] } as Nav)
+const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project', sub: 'setup', inspect: null, open: [], zoom: null } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
 const undoKey = (key: string) => `undo:${key}`
@@ -61,7 +62,13 @@ const ignoreKey = (key: string) => `ignored:${key}`
 /** A line in the panel's footer, in the language shown. */
 async function say($: any, key: Key, ...vars: (string | number)[]) {
   const c = await read($, core)
-  await update($, core, s => ({ ...s, message: t(c.lang, key, ...vars) }))
+  await update($, core, s => ({ ...s, busy: false, message: t(c.lang, key, ...vars) }))
+}
+
+/** A line that says something is under way: the top of the panel shows it with a mark, until `say` or a result replaces it. */
+async function work($: any, key: Key, ...vars: (string | number)[]) {
+  const c = await read($, core)
+  await update($, core, s => ({ ...s, busy: true, message: t(c.lang, key, ...vars) }))
 }
 
 async function setState($: any, state: ProjectState) {
@@ -217,15 +224,15 @@ async function undoHere($: any) {
 
 async function runCheckup($: any) {
   const c = await read($, core)
-  await say($, 'msg.checking')
+  await work($, 'msg.checking')
   const report = await checkup(disk($), c.dir).catch(() => [])
-  await update($, core, s => ({ ...s, report, confirm: null, message: report.length ? t(c.lang, 'g.todo', report.length) : t(c.lang, 'msg.healthy') }))
+  await update($, core, s => ({ ...s, report, confirm: null, busy: false, message: report.length ? t(c.lang, 'g.todo', report.length) : t(c.lang, 'msg.healthy') }))
 }
 
 async function runUpdate($: any) {
   const c = await read($, core)
   const ids = (c.index ?? []).filter(x => x.kind === 'plugin').map(x => x.key.slice(7))
-  await say($, 'msg.updating', ids.length)
+  await work($, 'msg.updating', ids.length)
   let ok = 0
   for (const argv of updateAll(ids)) {
     const r = await $.process.run(argv, { timeoutMs: 120_000 }).catch(() => ({ exitCode: -1 }))
@@ -241,8 +248,11 @@ async function fixIssue($: any, key: string) {
   const issue = c.report?.find(i => i.key === key)
   if (!issue?.fix) return
   if (c.confirm !== key) return void (await update($, core, s => ({ ...s, confirm: key })))
+  await work($, 'msg.removing', issue.a)
   const r = await $.process.run(issue.fix, { timeoutMs: 60_000 }).catch(() => ({ exitCode: -1 }))
-  if (r.exitCode !== 0) return say($, 'msg.cannotFix', key)
+  if (r.exitCode !== 0) return say($, 'msg.cannotFix', issue.a)
+  // The index drops the plugin too, so the map and the lists match what is installed.
+  await update($, core, s => ({ ...s, index: (s.index ?? []).filter(x => x.key !== key) }))
   await runCheckup($)
 }
 
@@ -367,12 +377,12 @@ async function probeScanner($: any) {
 
 /** One scan: the report comes on stdout, and exit 1 only means "do not install". */
 async function scanOne($: any, target: string): Promise<ScanResult | null> {
-  const r = await $.process.run(scanCmd(target), { timeoutMs: 180_000 }).catch(() => null)
+  const r = await $.process.run(scanCmd(target), { timeoutMs: 45_000 }).catch(() => null)
   return r ? parseScan(String(r.stdout ?? '')) : null
 }
 
 async function installScanner($: any) {
-  await say($, 'msg.installing')
+  await work($, 'msg.installing')
   const r = await $.process.run(installCmd(), { timeoutMs: 600_000 }).catch(() => null)
   if (!r || r.exitCode !== 0) return say($, 'msg.noUv')
   await probeScanner($)
@@ -394,7 +404,7 @@ async function fingerprint($: any, path: string): Promise<string> {
   return [path, ...entries.map((e: any) => `${e.name}:${e.size}:${e.mtimeMs}`)].join('|')
 }
 
-/** Scans every installed plugin and own skill, one after the other, and keeps the results. A folder that did not change since its last scan is not scanned again. */
+/** Scans every installed plugin and own skill, four at a time, and keeps the results. A folder that did not change since its last scan is not scanned again, and one that takes too long is skipped. */
 async function runScan($: any) {
   const c = await read($, core)
   if (c.scanner.state !== 'ready') return
@@ -402,25 +412,40 @@ async function runScan($: any) {
   const known = ((await $.store.get('scan-fps')) as Record<string, string> | undefined) ?? {}
   const fps: Record<string, string> = {}
   const scans: Record<string, ScanResult> = {}
-  for (const [i, target] of targets.entries()) {
-    await update($, core, s => ({ ...s, scanning: { done: i, total: targets.length }, message: null }))
-    const fp = await fingerprint($, target.path)
-    const before = c.scans[target.key]
-    if (before && known[target.key] === fp) {
-      scans[target.key] = before
-      fps[target.key] = fp
-      continue
-    }
-    const result = await scanOne($, target.path)
-    if (result) {
-      scans[target.key] = result
-      fps[target.key] = fp
+  let next = 0
+  let done = 0
+  let skipped = 0
+  await update($, core, s => ({ ...s, busy: true, scanning: { done: 0, total: targets.length }, message: null }))
+  const worker = async () => {
+    while (next < targets.length) {
+      const target = targets[next++]
+      const fp = await fingerprint($, target.path)
+      const before = c.scans[target.key]
+      if (before && known[target.key] === fp) {
+        scans[target.key] = before
+        fps[target.key] = fp
+      } else {
+        const result = await scanOne($, target.path)
+        if (result) {
+          scans[target.key] = result
+          fps[target.key] = fp
+        } else skipped += 1
+      }
+      done += 1
+      await update($, core, s => ({ ...s, scanning: { done, total: targets.length } }))
     }
   }
+  await Promise.all([worker(), worker(), worker(), worker()])
   const bad = Object.values(scans).filter(s => s.recommendation !== 'SAFE' && s.flagged > 0).length
   await $.store.set('scans', scans)
   await $.store.set('scan-fps', fps)
-  await update($, core, s => ({ ...s, scans, scanning: null, message: t(c.lang, 'msg.scanDone', targets.length, bad) }))
+  await update($, core, s => ({
+    ...s,
+    scans,
+    scanning: null,
+    busy: false,
+    message: t(c.lang, 'msg.scanDone', targets.length, bad) + (skipped > 0 ? ` ${t(c.lang, 'msg.skipped', skipped)}` : ''),
+  }))
 }
 
 /** Switches a tool off or on at the user level: a plugin through the CLI, a skill through skillOverrides. Reversible. */
@@ -487,8 +512,9 @@ export const register: Register = on => {
     const pref = (saidPref === 'auto' || isLang(saidPref) ? saidPref : 'auto') as Core['pref']
     const lang = pref === 'auto' ? await systemLang($) : (pref as Lang)
     const scans = ((await $.store.get('scans')) as Core['scans'] | undefined) ?? {}
-    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, ask: null }))
+    await update($, core, () => ({ scanner: { state: 'unknown', version: null } as Core['scanner'], scans, scanning: null, anyway: null, lang, pref, usage: null, uses, hint: null, used: {}, tick: 0, found: null, hits: null, setup, candidates, dir: configDir, message: null, report: null, confirm: null, index, project, state: project ? (saved ?? 'new') : null, chat: false, busy: false, ask: null }))
     await refreshUsage($)
+    void runCheckup($).catch(() => {})
     await probeScanner($)
     const checked = Number((await $.store.get('scanner-checked')) ?? 0)
     const now = await $.clock.now()
@@ -589,6 +615,7 @@ export const register: Register = on => {
     const now = await $.clock.now()
     const act = {
       tab: (tab: Nav['tab']) => void update($, nav, s => ({ ...s, tab })),
+      zoom: (cat: string | null) => void update($, nav, s => ({ ...s, zoom: cat })),
       fold: (cat: string) => void update($, nav, s => ({ ...s, open: (s.open ?? []).includes(cat) ? s.open.filter(x => x !== cat) : [...(s.open ?? []), cat] })),
       foldAll: (cats: string[]) => void update($, nav, s => ({ ...s, open: (s.open ?? []).length > 0 ? [] : cats })),
       inspect: (key: string) => void update($, nav, s => ({ ...s, inspect: key })),
@@ -627,7 +654,7 @@ export const register: Register = on => {
         map = terminal ? (
           <ui.Raster key="map" columns={width} rows={16} cells={cells(lay, c.used, now, width, 16, opts)} />
         ) : (
-          <ui.Svg source={svg(lay, c.used, now, opts)} alt="Map of installed tools, lit when used" isInteractive />
+          <ui.Svg source={svg(lay, c.used, now, { ...opts, zoom: n.zoom })} alt="Map of installed tools, lit when used" width={740} height={444} isInteractive />
         )
       }
       return Panel({ ui, c, n, github, act, terminal, width, map, now, lang: c.lang })

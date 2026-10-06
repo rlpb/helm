@@ -150,4 +150,8 @@ export const ja: Dict = {
   'g.status': '状態',
   'g.unchecked': 'まだ確認していません',
   'map.hint': '点にカーソルを重ねると内容が出ます。光っている点は Claude がいま使ったものです。',
+  'msg.removing': '{0} を削除中…',
+  'g.recheck': '再確認',
+  'map.all': 'マップ全体',
+  'msg.skipped': '{0} 件はスキャンに時間がかかりすぎるためスキップしました。',
 }

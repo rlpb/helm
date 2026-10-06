@@ -45,6 +45,16 @@ describe('the map', () => {
     expect(text).toContain('Does a thing &amp; more &lt;b&gt; for you')
   })
 
+  test('zooming on a category frames its cluster and names every dot in it', () => {
+    const lay = layout(INDEX)
+    const whole = svg(lay, {}, 0)
+    const near = svg(lay, {}, 0, { zoom: 'build' })
+    expect(whole).toContain('viewBox="0 0 1000 600"')
+    expect(near).not.toContain('viewBox="0 0 1000 600"')
+    expect((near.match(/font-size="5.5"/g) ?? []).length).toBeGreaterThan(0)
+    expect(whole).not.toContain('font-size="5.5"')
+  })
+
   test('the terminal grid has columns x rows x 3 words', () => {
     const b64 = cells(layout(INDEX), {}, 0, 40, 10)
     const bytes = b64.length / 4 * 3 - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0)

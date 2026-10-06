@@ -150,4 +150,8 @@ export const ko: Dict = {
   'g.status': '상태',
   'g.unchecked': '아직 확인하지 않음',
   'map.hint': '점 위에 마우스를 올리면 설명이 보입니다. 켜진 점은 Claude가 방금 쓴 것입니다.',
+  'msg.removing': '{0} 제거 중…',
+  'g.recheck': '다시 확인',
+  'map.all': '전체 지도',
+  'msg.skipped': '{0}개는 검사가 너무 느려 건너뛰었습니다.',
 }

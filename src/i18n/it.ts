@@ -150,4 +150,8 @@ export const it: Dict = {
   'g.status': 'Stato',
   'g.unchecked': 'Non ancora controllato',
   'map.hint': 'Passa su un punto per vedere cos’è. I punti accesi sono ciò che Claude ha appena usato.',
+  'msg.removing': 'Rimuovo {0}…',
+  'g.recheck': 'Ricontrolla',
+  'map.all': 'Tutta la mappa',
+  'msg.skipped': '{0} troppo lente da scansionare, saltate.',
 }

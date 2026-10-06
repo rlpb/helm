@@ -152,6 +152,10 @@ export const en = {
   'g.status': 'Status',
   'g.unchecked': 'Not checked yet',
   'map.hint': 'Hover a dot for what it is. Lit dots are what Claude just used.',
+  'msg.removing': 'Removing {0}…',
+  'g.recheck': 'Check again',
+  'map.all': 'Whole map',
+  'msg.skipped': '{0} too slow to scan, skipped.',
 }
 
 export type Dict = typeof en

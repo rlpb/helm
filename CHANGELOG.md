@@ -6,6 +6,19 @@ All notable changes are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-06
+
+### Fixed
+
+- **Hover cards are opaque.** The card no longer lets the list show through: every line is painted on its own background.
+- **Scanning no longer stalls.** Skills were scanned one at a time with a three minute limit each, so one huge plugin could hold the whole run on "1 of 192". Four are scanned at once, a tool that takes more than 45 seconds is skipped (and the summary says how many), and the count moves after every finished tool.
+- **Nothing happens silently.** The top of the panel now shows what is under way with a mark (checking, removing, updating, scanning) and the result when it ends. A removal that fails says so there instead of in a footer below the fold, and a removed plugin disappears from the lists and the map at once.
+- **Health checks itself** when a session starts and after every removal, so it is never "not checked". The button is now **Check again**.
+
+### Changed
+
+- **The Map has focus chips.** Press a category to zoom on its cluster, with every tool in it named; press **Whole map** to go back. The picture is drawn at a fixed larger size instead of the small default.
+
 ## [0.9.0] - 2026-10-06
 
 ### Changed
@@ -149,7 +162,8 @@ First release.
   items (README, CI, `SECURITY.md`, Dependabot, branch protection and more); a short brief rides once on
   the first prompt of the project.
 
-[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/rlpb/helm/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/rlpb/helm/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/rlpb/helm/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/rlpb/helm/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rlpb/helm/compare/v0.7.3...v0.8.0

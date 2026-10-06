@@ -113,6 +113,8 @@ export type Opts = {
   note?: (key: string) => string
   /** "on" and "off", in the language shown. */
   states?: { on: string; off: string }
+  /** A category to zoom on: the picture frames its cluster and names every dot in it. */
+  zoom?: string | null
 }
 
 export function svg(lay: Layout, used: Record<string, number>, now: number, opts: Opts = {}): string {
@@ -120,10 +122,13 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
   const total = new Map<string, { n: number; on: number }>()
   for (const n of lay.nodes) if (!n.hub) total.set(n.cat, { n: (total.get(n.cat)?.n ?? 0) + 1, on: (total.get(n.cat)?.on ?? 0) + (n.on ? 1 : 0) })
   const states = opts.states ?? { on: 'on', off: 'off' }
+  const focus = opts.zoom ? lay.nodes.find(n => n.hub && n.cat === opts.zoom) : undefined
+  const Z = focus ? 2.8 : 1
+  const view = focus ? `${(focus.x - W / Z / 2).toFixed(0)} ${(focus.y - H / Z / 2).toFixed(0)} ${(W / Z).toFixed(0)} ${(H / Z).toFixed(0)}` : `0 0 ${W} ${H}`
   const dots = lay.nodes.filter(n => !n.hub)
 
   const build = (descLines: number, tips = true): string => {
-    const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`]
+    const out: string[] = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${W}" height="${H}">`]
     // Hover is plain CSS: the frame has no script. Each dot has a hit circle, and the card of dot i follows it.
     const ci = (cat: string) => Math.max(0, Object.keys(COLOR).indexOf(cat))
     const css = ['.h{cursor:pointer;fill:#000;fill-opacity:0.001}', '.t{opacity:0;pointer-events:none}', '.h:hover{stroke:#fff;stroke-opacity:0.9;stroke-width:1.5}', '.t rect{fill:#1a1f2e;stroke-opacity:0.8}', '.t text{fill:#9aa3b2;font:11px sans-serif}', '.t .a{fill:#fff;font:bold 13px sans-serif}', '.t .d{fill:#d4d9e4;font:11.5px sans-serif}']
@@ -176,9 +181,12 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
       const x = n.x.toFixed(0)
       const y = n.y.toFixed(0)
       const lit = glow(used, n.key, now)
-      const named = lit > 0 || (opts.uses?.[n.key] ?? 0) > 0
+      const inFocus = !!focus && n.cat === opts.zoom && (total.get(n.cat)?.n ?? 0) <= 90
+      const named = lit > 0 || (opts.uses?.[n.key] ?? 0) > 0 || inFocus
       const r = named ? 5.5 : 4.4
-      if (named) out.push(`<text x="${(n.x + 11).toFixed(0)}" y="${(n.y + 4).toFixed(0)}" fill="#e6e9ef" font-size="12" font-family="sans-serif" stroke="${BG}" stroke-width="3" paint-order="stroke">${esc(n.label)}</text>`)
+      // Names face outward from the hub, so neighbours on a ring do not write over each other.
+      const left = inFocus && !!focus && n.x < focus.x
+      if (named) out.push(`<text x="${(n.x + (left ? -9 : 9)).toFixed(0)}" y="${(n.y + 3).toFixed(0)}"${left ? ' text-anchor="end"' : ''} fill="#e6e9ef" font-size="${inFocus ? 5.5 : 12}" font-family="sans-serif" stroke="${BG}" stroke-width="3" paint-order="stroke">${esc(n.label)}</text>`)
       if (lit > 0) {
         const left = Math.round(lit * GLOW_MS)
         out.push(
@@ -204,7 +212,7 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
       const X = (tx + 14).toFixed(0)
       const tspans = desc.map((l, j) => `<tspan x="${X}" y="${(ty + 56 + j * 15).toFixed(0)}">${esc(l)}</tspan>`).join('')
       out.push(
-        `<g class="t t${i} k${ci(n.cat)}"><rect x="${tx.toFixed(0)}" y="${ty.toFixed(0)}" width="${w}" height="${h}" rx="10"/>` +
+        `<g class="t t${i} k${ci(n.cat)}"${Z > 1 ? ` transform="translate(${n.x.toFixed(0)} ${n.y.toFixed(0)}) scale(${(1 / Z).toFixed(3)}) translate(${(-n.x).toFixed(0)} ${(-n.y).toFixed(0)})"` : ''}><rect x="${tx.toFixed(0)}" y="${ty.toFixed(0)}" width="${w}" height="${h}" rx="10"/>` +
           `<text class="a" x="${X}" y="${(ty + 22).toFixed(0)}">${esc(n.label)}</text>` +
           `<text x="${X}" y="${(ty + 39).toFixed(0)}">${esc(line2)}</text>` +
           (desc.length ? `<text class="d">${tspans}</text>` : '') +
@@ -212,7 +220,7 @@ export function svg(lay: Layout, used: Record<string, number>, now: number, opts
       )
     })
 
-    out.push(`<text x="26" y="${H - 22}" fill="#9aa3b2" font-size="12" font-family="sans-serif">● ${esc(states.on)}   ○ ${esc(states.off)}</text>`)
+    if (!focus) out.push(`<text x="26" y="${H - 22}" fill="#9aa3b2" font-size="12" font-family="sans-serif">● ${esc(states.on)}   ○ ${esc(states.off)}</text>`)
     out.push('</svg>')
     return out.join('')
   }
