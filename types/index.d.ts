@@ -25,10 +25,14 @@ export type Project = { root: string; name: string; key: string }
 /** `new`: Helm has not seen this folder; `ready`: set up; `declined`: the person said "not here". */
 export type ProjectState = 'new' | 'ready' | 'declined'
 
+/** What the person said they are building, and the entries that fit it. */
+export type Ask = { text: string; picks: string[] }
+
 export type Core = {
   index: Entry[] | null
   project: Project | null
   state: ProjectState | null
+  ask: Ask | null
 }
 
 export type Nav = { tab: Tab }

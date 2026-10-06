@@ -4,10 +4,11 @@ import type { Register } from 'claude-code'
 import type { Core, Nav, ProjectState } from '../types'
 import { tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
+import { shortlist } from '../src/shortlist'
 import { isProject, projectKey, projectName } from '../src/project'
 
 const PANE = 'helm'
-const core = atom({ plugin: 'helm', key: 'core' } as const, { index: null, project: null, state: null } as Core)
+const core = atom({ plugin: 'helm', key: 'core' } as const, { index: null, project: null, state: null, ask: null } as Core)
 const nav = atom({ plugin: 'helm', key: 'nav' } as const, { tab: 'project' } as Nav)
 
 const stateKey = (key: string) => `project:${key}`
@@ -36,7 +37,7 @@ export const register: Register = on => {
       settings,
     ).catch(() => [])
 
-    await update($, core, () => ({ index, project, state: project ? (saved ?? 'new') : null }))
+    await update($, core, () => ({ index, project, state: project ? (saved ?? 'new') : null, ask: null }))
     return next(e)
   })
 
@@ -67,7 +68,7 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Button, Input, Text } = $.ui.resolve(e)
     const c = await read($, core)
     const n = await read($, nav)
     const rows = tally(c.index ?? [])
@@ -86,11 +87,36 @@ export const register: Register = on => {
             {c.index.length} installed, {active} on
           </Text>
         )}
-        {rows.map(r => (
-          <Text key={r.category}>
-            {r.category}: {r.on}/{r.total}
-          </Text>
-        ))}
+        {n.tab === 'project' && c.project && (
+          <Input
+            key="ask"
+            label="What are you building? "
+            placeholder="a web shop, a CLI tool, a data report…"
+            value={c.ask?.text ?? ''}
+            submitLabel="find tools"
+            onSubmit={text => update($, core, s => ({ ...s, ask: { text, picks: shortlist(s.index ?? [], text) } }))}
+          />
+        )}
+        {n.tab === 'project' && c.ask && (
+          <Box flexDirection="column">
+            {c.ask.picks.length === 0 && <Text dimColor>Nothing installed fits that yet.</Text>}
+            {c.ask.picks.map(key => {
+              const entry = (c.index ?? []).find(x => x.key === key)
+              return entry ? (
+                <Text key={key}>
+                  {entry.on ? '● ' : '○ '}
+                  {entry.name} <Text dimColor>{entry.description}</Text>
+                </Text>
+              ) : null
+            })}
+          </Box>
+        )}
+        {(n.tab === 'global' || !c.ask) &&
+          rows.map(r => (
+            <Text key={r.category}>
+              {r.category}: {r.on}/{r.total}
+            </Text>
+          ))}
       </Box>
     )
   })

@@ -3,6 +3,7 @@ import { describe, expect, test } from 'claude-code/testing'
 import { buildIndex, categorize, friendly, parseFrontmatter, tally } from '../src/catalog'
 import { loadIndex } from '../src/load'
 import { isProject, projectKey, projectName } from '../src/project'
+import { shortlist } from '../src/shortlist'
 
 const BASE = '/helm-demo/.claude'
 
@@ -52,6 +53,23 @@ describe('the index', () => {
     }
     const index = await loadIndex(disk, BASE, { enabledPlugins: { 'tdd@m': true }, skillOverrides: { slop: 'off' } })
     expect(index.map(e => [e.key, e.on])).toEqual([['plugin:tdd@m', true], ['skill:slop', false]])
+  })
+})
+
+describe('the shortlist', () => {
+  test('a description picks the entries that fit, best first', () => {
+    const index = buildIndex({
+      plugins: [],
+      skills: [
+        { name: 'report-writer', description: 'Write a research paper with citations', on: false },
+        { name: 'seo-audit', description: 'Audit a website for search', on: true },
+        { name: 'ponytail', description: 'Lazy senior developer', on: true },
+      ],
+    })
+    expect(shortlist(index, 'a report with charts and citations')).toEqual(['skill:report-writer'])
+    expect(shortlist(index, 'a website')).toEqual(['skill:seo-audit'])
+    expect(shortlist(index, 'zzz')).toEqual([])
+    expect(shortlist(index, '')).toEqual([])
   })
 })
 
